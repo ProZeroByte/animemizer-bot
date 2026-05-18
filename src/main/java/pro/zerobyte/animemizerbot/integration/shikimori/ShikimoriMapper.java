@@ -1,0 +1,83 @@
+package pro.zerobyte.animemizerbot.integration.shikimori;
+
+import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
+import pro.zerobyte.animemizerbot.config.props.AnimeUrlProperties;
+import pro.zerobyte.animemizerbot.core.anime.Anime;
+import pro.zerobyte.animemizerbot.core.anime.AnimeLink;
+import pro.zerobyte.animemizerbot.core.anime.AnimeSource;
+import pro.zerobyte.animemizerbot.integration.shikimori.dto.ShikimoriAnimeDto;
+import pro.zerobyte.animemizerbot.integration.shikimori.dto.ShikimoriAnimeRelatedDto;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Set;
+
+@Component
+public class ShikimoriMapper {
+    private final AnimeUrlProperties animeUrlProperties;
+
+    public ShikimoriMapper(AnimeUrlProperties animeUrlProperties) {
+        this.animeUrlProperties = animeUrlProperties;
+    }
+
+    public Anime toEntity(ShikimoriAnimeDto dto, List<ShikimoriAnimeRelatedDto> relatedAnimes) {
+        return new Anime(
+                null,
+                AnimeSource.SHIKIMORI.createPublicId(dto.id()),
+                extractRelatedId(relatedAnimes, "Prequel"),
+                extractRelatedId(relatedAnimes, "Sequel"),
+                dto.name(),
+                dto.russian(),
+                CollectionUtils.firstElement(dto.english()),
+                dto.description(),
+                animeUrlProperties.getUrlFor(AnimeSource.SHIKIMORI) + dto.image().original(),
+                dto.kind(),
+                Anime.computeIsReleased(dto.ongoing(), dto.episodes(), dto.episodesAired()),
+                dto.anons(),
+                dto.ongoing(),
+                dto.episodes(),
+                dto.episodesAired(),
+                dto.airedOn(),
+                dto.releasedOn(),
+                toLocalDateTime(dto.updatedAt()),
+                toLocalDateTime(dto.nextEpisodeAt()),
+                Set.of(new AnimeLink(null, null, AnimeSource.SHIKIMORI, String.valueOf(dto.id())))
+        );
+    }
+
+    private String extractRelatedId(List<ShikimoriAnimeRelatedDto> relatedAnimes, String relation) {
+        if (relatedAnimes == null || relatedAnimes.isEmpty()) {
+            return null;
+        }
+        return relatedAnimes.stream()
+                .filter(r -> relation.equals(r.relation()))
+                .filter(r -> r.anime() != null)
+                .map(r -> AnimeSource.SHIKIMORI.createPublicId(r.anime().id()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * Converts various date/time types to LocalDateTime for domain entity storage.
+     * Handles OffsetDateTime (from Shikimori API timestamps with timezone) and LocalDate.
+     */
+    private LocalDateTime toLocalDateTime(Object dateTime) {
+        if (dateTime == null) {
+            return null;
+        }
+        if (dateTime instanceof LocalDateTime ldt) {
+            return ldt;
+        }
+        if (dateTime instanceof OffsetDateTime odt) {
+            return odt.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime();
+        }
+        if (dateTime instanceof LocalDate ld) {
+            return ld.atStartOfDay();
+        }
+        throw new IllegalArgumentException("Unsupported date/time type: " + dateTime.getClass());
+    }
+}

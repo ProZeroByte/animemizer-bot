@@ -1,0 +1,297 @@
+{
+  "links": [
+    {
+      "id": 44688352,
+      "source_id": 55644,
+      "target_id": 48549,
+      "source": 3,
+      "target": 4,
+      "weight": 2,
+      "relation": "prequel"
+    },
+    {
+      "id": 44688353,
+      "source_id": 55644,
+      "target_id": 57592,
+      "source": 3,
+      "target": 2,
+      "weight": 2,
+      "relation": "sequel"
+    },
+    {
+      "id": 46565399,
+      "source_id": 48549,
+      "target_id": 50612,
+      "source": 4,
+      "target": 5,
+      "weight": 2,
+      "relation": "prequel"
+    },
+    {
+      "id": 46565400,
+      "source_id": 48549,
+      "target_id": 55644,
+      "source": 4,
+      "target": 3,
+      "weight": 2,
+      "relation": "sequel"
+    },
+    {
+      "id": 46064096,
+      "source_id": 57592,
+      "target_id": 55644,
+      "source": 2,
+      "target": 3,
+      "weight": 2,
+      "relation": "prequel"
+    },
+    {
+      "id": 46064097,
+      "source_id": 57592,
+      "target_id": 61322,
+      "source": 2,
+      "target": 1,
+      "weight": 2,
+      "relation": "sequel"
+    },
+    {
+      "id": 45545732,
+      "source_id": 50612,
+      "target_id": 40852,
+      "source": 5,
+      "target": 7,
+      "weight": 2,
+      "relation": "prequel"
+    },
+    {
+      "id": 45545733,
+      "source_id": 50612,
+      "target_id": 48549,
+      "source": 5,
+      "target": 4,
+      "weight": 2,
+      "relation": "sequel"
+    },
+    {
+      "id": 46598463,
+      "source_id": 61322,
+      "target_id": 57592,
+      "source": 1,
+      "target": 2,
+      "weight": 2,
+      "relation": "prequel"
+    },
+    {
+      "id": 46598464,
+      "source_id": 61322,
+      "target_id": 62568,
+      "source": 1,
+      "target": 0,
+      "weight": 2,
+      "relation": "sequel"
+    },
+    {
+      "id": 46761568,
+      "source_id": 62568,
+      "target_id": 61322,
+      "source": 0,
+      "target": 1,
+      "weight": 1,
+      "relation": "prequel"
+    },
+    {
+      "id": 46260537,
+      "source_id": 40852,
+      "target_id": 38691,
+      "source": 7,
+      "target": 10,
+      "weight": 3,
+      "relation": "prequel"
+    },
+    {
+      "id": 46260538,
+      "source_id": 40852,
+      "target_id": 50612,
+      "source": 7,
+      "target": 5,
+      "weight": 3,
+      "relation": "sequel"
+    },
+    {
+      "id": 46260540,
+      "source_id": 40852,
+      "target_id": 55216,
+      "source": 7,
+      "target": 6,
+      "weight": 3,
+      "relation": "other"
+    },
+    {
+      "id": 45414219,
+      "source_id": 55216,
+      "target_id": 40852,
+      "source": 6,
+      "target": 7,
+      "weight": 1,
+      "relation": "other"
+    },
+    {
+      "id": 45623450,
+      "source_id": 38691,
+      "target_id": 40852,
+      "source": 10,
+      "target": 7,
+      "weight": 3,
+      "relation": "sequel"
+    },
+    {
+      "id": 45623453,
+      "source_id": 38691,
+      "target_id": 43349,
+      "source": 10,
+      "target": 9,
+      "weight": 3,
+      "relation": "character"
+    },
+    {
+      "id": 45623452,
+      "source_id": 38691,
+      "target_id": 43555,
+      "source": 10,
+      "target": 8,
+      "weight": 3,
+      "relation": "summary"
+    },
+    {
+      "id": 46260709,
+      "source_id": 43555,
+      "target_id": 38691,
+      "source": 8,
+      "target": 10,
+      "weight": 1,
+      "relation": "full_story"
+    },
+    {
+      "id": 46260683,
+      "source_id": 43349,
+      "target_id": 38691,
+      "source": 9,
+      "target": 10,
+      "weight": 1,
+      "relation": "character"
+    }
+  ],
+  "nodes": [
+    {
+      "id": 62568,
+      "date": 1775077200,
+      "name": "Доктор Стоун: Научное будущее. Часть 3",
+      "image_url": "https://shikimori.io/assets/globals/missing_x96.jpg",
+      "url": "/animes/62568-dr-stone-science-future-part-3",
+      "year": 2026,
+      "kind": "TV Сериал",
+      "weight": 1
+    },
+    {
+      "id": 61322,
+      "date": 1752094800,
+      "name": "Доктор Стоун: Научное будущее. Часть 2",
+      "image_url": "https://shikimori.io/assets/globals/missing_x96.jpg",
+      "url": "/animes/61322-dr-stone-science-future-part-2",
+      "year": 2025,
+      "kind": "TV Сериал",
+      "weight": 2
+    },
+    {
+      "id": 57592,
+      "date": 1736370000,
+      "name": "Доктор Стоун: Научное будущее",
+      "image_url": "https://shikimori.io/system/animes/x96/57592.jpg?1711049777",
+      "url": "/animes/57592-dr-stone-science-future",
+      "year": 2025,
+      "kind": "TV Сериал",
+      "weight": 2
+    },
+    {
+      "id": 55644,
+      "date": 1697058000,
+      "name": "Доктор Стоун: Новый мир. Часть 2",
+      "image_url": "https://shikimori.io/system/animes/x96/55644.jpg?1718586054",
+      "url": "/animes/55644-dr-stone-new-world-part-2",
+      "year": 2023,
+      "kind": "TV Сериал",
+      "weight": 2
+    },
+    {
+      "id": 48549,
+      "date": 1680728400,
+      "name": "Доктор Стоун: Новый мир",
+      "image_url": "https://shikimori.io/system/animes/x96/48549.jpg?1711948306",
+      "url": "/animes/48549-dr-stone-new-world",
+      "year": 2023,
+      "kind": "TV Сериал",
+      "weight": 2
+    },
+    {
+      "id": 50612,
+      "date": 1657400400,
+      "name": "Доктор Стоун: Рюсуй",
+      "image_url": "https://shikimori.io/system/animes/x96/50612.jpg?1713755021",
+      "url": "/animes/50612-dr-stone-ryuusui",
+      "year": 2022,
+      "kind": "TV Спецвыпуск",
+      "weight": 2
+    },
+    {
+      "id": 55216,
+      "date": 1615237200,
+      "name": "Только голос",
+      "image_url": "https://shikimori.io/system/animes/x96/55216.jpg?1713748407",
+      "url": "/animes/55216-koe-dake-ga",
+      "year": 2021,
+      "kind": "Клип",
+      "weight": 1
+    },
+    {
+      "id": 40852,
+      "date": 1610571600,
+      "name": "Доктор Стоун: Каменные войны",
+      "image_url": "https://shikimori.io/system/animes/x96/40852.jpg?1711948312",
+      "url": "/animes/40852-dr-stone-stone-wars",
+      "year": 2021,
+      "kind": "TV Сериал",
+      "weight": 3
+    },
+    {
+      "id": 43555,
+      "date": 1602363600,
+      "name": "Доктор Стоун: Каменные войны — Эпизод 0",
+      "image_url": "https://shikimori.io/system/animes/x96/43555.jpg?1711948279",
+      "url": "/animes/43555-dr-stone-stone-wars-kaisen-zenya-special-eizou",
+      "year": 2020,
+      "kind": "Спецвыпуск",
+      "weight": 1
+    },
+    {
+      "id": 43349,
+      "date": 1601758800,
+      "name": "Окаменевший Кусанаги",
+      "image_url": "https://shikimori.io/system/animes/x96/43349.jpg?1711972402",
+      "url": "/animes/43349-sekikashita-kusanagi",
+      "year": 2020,
+      "kind": "Реклама",
+      "weight": 1
+    },
+    {
+      "id": 38691,
+      "date": 1562274000,
+      "name": "Доктор Стоун",
+      "image_url": "https://shikimori.io/system/animes/x96/38691.jpg?1711948374",
+      "url": "/animes/z38691-dr-stone",
+      "year": 2019,
+      "kind": "TV Сериал",
+      "weight": 3
+    }
+  ],
+  "current_id": 55644
+}

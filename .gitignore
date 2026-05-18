@@ -1,0 +1,14 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+.env
+.run
+local_scripts
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr

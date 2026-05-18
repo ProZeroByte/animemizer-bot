@@ -1,0 +1,74 @@
+[
+  {
+    "relation": "Adaptation",
+    "relation_russian": "Адаптация",
+    "anime": null,
+    "manga": {
+      "id": 103897,
+      "name": "Dr. Stone",
+      "russian": "Доктор Стоун",
+      "image": {
+        "original": "/system/mangas/original/103897.jpg?1712482541",
+        "preview": "/system/mangas/preview/103897.jpg?1712482541",
+        "x96": "/system/mangas/x96/103897.jpg?1712482541",
+        "x48": "/system/mangas/x48/103897.jpg?1712482541"
+      },
+      "url": "/mangas/z103897-dr-stone",
+      "kind": "manga",
+      "score": "8.2",
+      "status": "released",
+      "volumes": 27,
+      "chapters": 237,
+      "aired_on": "2017-03-06",
+      "released_on": "2023-12-25"
+    }
+  },
+  {
+    "relation": "Prequel",
+    "relation_russian": "Предыстория",
+    "anime": {
+      "id": 48549,
+      "name": "Dr. Stone: New World",
+      "russian": "Доктор Стоун: Новый мир",
+      "image": {
+        "original": "/system/animes/original/48549.jpg?1711948306",
+        "preview": "/system/animes/preview/48549.jpg?1711948306",
+        "x96": "/system/animes/x96/48549.jpg?1711948306",
+        "x48": "/system/animes/x48/48549.jpg?1711948306"
+      },
+      "url": "/animes/48549-dr-stone-new-world",
+      "kind": "tv",
+      "score": "8.14",
+      "status": "released",
+      "episodes": 11,
+      "episodes_aired": 11,
+      "aired_on": "2023-04-06",
+      "released_on": "2023-06-15"
+    },
+    "manga": null
+  },
+  {
+    "relation": "Sequel",
+    "relation_russian": "Продолжение",
+    "anime": {
+      "id": 57592,
+      "name": "Dr. Stone: Science Future",
+      "russian": "Доктор Стоун: Научное будущее",
+      "image": {
+        "original": "/system/animes/original/57592.jpg?1711049777",
+        "preview": "/system/animes/preview/57592.jpg?1711049777",
+        "x96": "/system/animes/x96/57592.jpg?1711049777",
+        "x48": "/system/animes/x48/57592.jpg?1711049777"
+      },
+      "url": "/animes/57592-dr-stone-science-future",
+      "kind": "tv",
+      "score": "8.25",
+      "status": "released",
+      "episodes": 12,
+      "episodes_aired": 12,
+      "aired_on": "2025-01-09",
+      "released_on": "2025-03-27"
+    },
+    "manga": null
+  }
+]

@@ -1,0 +1,8 @@
+telegram:
+  bot:
+    webhook-path: ${TELEGRAM_BOT_WEBHOOK_PATH}
+    webhook-base-url: ${TELEGRAM_BOT_WEBHOOK_BASE_URL}
+
+logging:
+  level:
+    root: INFO

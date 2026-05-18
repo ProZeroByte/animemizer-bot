@@ -1,0 +1,197 @@
+{
+  "id": 55644,
+  "name": "Dr. Stone: New World Part 2",
+  "russian": "Доктор Стоун: Новый мир. Часть 2",
+  "image": {
+    "original": "/system/animes/original/55644.jpg?1718586054",
+    "preview": "/system/animes/preview/55644.jpg?1718586054",
+    "x96": "/system/animes/x96/55644.jpg?1718586054",
+    "x48": "/system/animes/x48/55644.jpg?1718586054"
+  },
+  "url": "/animes/55644-dr-stone-new-world-part-2",
+  "kind": "tv",
+  "score": "8.31",
+  "status": "released",
+  "episodes": 11,
+  "episodes_aired": 10,
+  "aired_on": "2023-10-12",
+  "released_on": "2023-12-21",
+  "rating": "pg_13",
+  "english": [
+    "Dr. Stone: New World Part 2"
+  ],
+  "japanese": [
+    "Dr.STONE NEW WORLD"
+  ],
+  "synonyms": [
+    "Доктор Стоун: Новый свет",
+    "Dr. Stone 3rd Season Part 2"
+  ],
+  "license_name_ru": null,
+  "duration": 23,
+  "description": null,
+  "description_html": "\u003cdiv class=\"b-text_with_paragraphs\"\u003e\u003c/div\u003e",
+  "description_source": null,
+  "franchise": "dr_stone",
+  "favoured": false,
+  "anons": false,
+  "ongoing": false,
+  "thread_id": 512207,
+  "topic_id": 512207,
+  "myanimelist_id": 55644,
+  "rates_scores_stats": [
+    {
+      "name": 10,
+      "value": 4517
+    },
+    {
+      "name": 9,
+      "value": 4243
+    },
+    {
+      "name": 8,
+      "value": 6544
+    },
+    {
+      "name": 7,
+      "value": 3502
+    },
+    {
+      "name": 6,
+      "value": 1050
+    },
+    {
+      "name": 5,
+      "value": 322
+    },
+    {
+      "name": 4,
+      "value": 90
+    },
+    {
+      "name": 3,
+      "value": 41
+    },
+    {
+      "name": 2,
+      "value": 16
+    },
+    {
+      "name": 1,
+      "value": 27
+    }
+  ],
+  "rates_statuses_stats": [
+    {
+      "name": "Запланировано",
+      "value": 10119
+    },
+    {
+      "name": "Просмотрено",
+      "value": 41825
+    },
+    {
+      "name": "Смотрю",
+      "value": 1428
+    },
+    {
+      "name": "Брошено",
+      "value": 575
+    },
+    {
+      "name": "Отложено",
+      "value": 514
+    }
+  ],
+  "updated_at": "2026-05-19T08:38:42.344+03:00",
+  "next_episode_at": null,
+  "fansubbers": [
+    "Crunchyroll",
+    "CafeSubs"
+  ],
+  "fandubbers": [
+    "AniMaunt",
+    "AniLibria",
+    "JAM CLUB \u0026 Dream Cast",
+    "Amazing Dubbing",
+    "AniBaza",
+    "AniStar",
+    "AnimeVost",
+    "AniDUB",
+    "HDrezka Studio",
+    "DOBROVOICE",
+    "AniDUB Online",
+    "AniPlague"
+  ],
+  "licensors": [],
+  "genres": [
+    {
+      "id": 2,
+      "name": "Adventure",
+      "russian": "Приключения",
+      "kind": "genre",
+      "entry_type": "Anime"
+    },
+    {
+      "id": 4,
+      "name": "Comedy",
+      "russian": "Комедия",
+      "kind": "genre",
+      "entry_type": "Anime"
+    },
+    {
+      "id": 24,
+      "name": "Sci-Fi",
+      "russian": "Фантастика",
+      "kind": "genre",
+      "entry_type": "Anime"
+    },
+    {
+      "id": 27,
+      "name": "Shounen",
+      "russian": "Сёнен",
+      "kind": "genre",
+      "entry_type": "Anime"
+    }
+  ],
+  "studios": [
+    {
+      "id": 73,
+      "name": "TMS Entertainment",
+      "filtered_name": "TMS",
+      "real": true,
+      "image": "/system/studios/original/73.?1413190852"
+    }
+  ],
+  "videos": [
+    {
+      "id": 59099,
+      "url": "https://youtu.be/g6lRblWDKCk",
+      "image_url": "http://img.youtube.com/vi/g6lRblWDKCk/hqdefault.jpg",
+      "player_url": "http://youtube.com/embed/g6lRblWDKCk",
+      "name": "PV1",
+      "kind": "pv",
+      "hosting": "youtube"
+    },
+    {
+      "id": 59177,
+      "url": "https://youtu.be/COu47d3Ge9I",
+      "image_url": "http://img.youtube.com/vi/COu47d3Ge9I/hqdefault.jpg",
+      "player_url": "http://youtube.com/embed/COu47d3Ge9I",
+      "name": "PV1 (Crunchyroll) Sub",
+      "kind": "pv",
+      "hosting": "youtube"
+    }
+  ],
+  "screenshots": [
+    {
+      "original": "/system/screenshots/original/a6e9ca8568688c3a2dec84e23f6458e3dd7550d9.jpg?1697124069",
+      "preview": "/system/screenshots/x332/a6e9ca8568688c3a2dec84e23f6458e3dd7550d9.jpg?1697124069"
+    },
+    {
+      "original": "/system/screenshots/original/6ffd0423e1325937037649a073abd9ac74e0f700.jpg?1697124070",
+      "preview": "/system/screenshots/x332/6ffd0423e1325937037649a073abd9ac74e0f700.jpg?1697124070"
+    }
+  ],
+  "user_rate": null
+}

@@ -1,6 +1,7 @@
 package pro.zerobyte.animemizerbot.core.anime;
 
 import pro.zerobyte.animemizerbot.bot.message.TelegramMessageUtils;
+import pro.zerobyte.animemizerbot.config.CacheConfig;
 import pro.zerobyte.animemizerbot.integration.shikimori.ShikimoriConnector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,12 +19,12 @@ import java.util.function.Predicate;
 //TODO: Think about refactoring this service
 public class AnimeService {
     private static final Logger log = LoggerFactory.getLogger(AnimeService.class);
-    private static final String FAILURE_CACHE_NAME = "providerCheckFailures";
 
     private final AnimeRepository repository;
     private final ShikimoriConnector shikimoriConnector;
     private final List<AnimeWatchProvider> activeProviders;
-    private final Cache providerCheckFailuresCache;
+    private final Cache providerFailuresCache;
+    private final Cache animeByIdsCache;
 
     public AnimeService(AnimeRepository repository,
                         ShikimoriConnector shikimoriConnector,
@@ -32,7 +33,8 @@ public class AnimeService {
         this.repository = repository;
         this.shikimoriConnector = shikimoriConnector;
         this.activeProviders = activeProviders;
-        this.providerCheckFailuresCache = cacheManager.getCache(FAILURE_CACHE_NAME);
+        this.providerFailuresCache = cacheManager.getCache(CacheConfig.PROVIDER_FAILURES);
+        this.animeByIdsCache = cacheManager.getCache(CacheConfig.ANIME_BY_ID);
     }
 
     public Anime save(Anime anime) {
@@ -61,7 +63,17 @@ public class AnimeService {
                 .or(() -> repository.findByEnglishNameIgnoreCase(name))
                 .or(() -> repository.findByNameIgnoreCase(name))
                 .or(() -> shikimoriConnector.findByTitle(name))
-                .map(this::enrichAndSaveIfRequired);
+                .map(this::updateIfRequired);
+    }
+
+    //TODO: Think about refactoring this method
+    private Anime updateIfRequired(Anime anime) {
+        Optional<Long> key = AnimeSource.SHIKIMORI.extractIdFromPublicId(anime.publicId());
+        boolean isCachedByShikimoriId = key.isPresent() && animeByIdsCache.get(key.get(), Anime.class) != null;
+        if (anime.id() !=null && anime.isOngoing() && key.isPresent() && !isCachedByShikimoriId) {
+            anime = shikimoriConnector.findById(key.get()).orElse(anime);
+        }
+        return enrichAndSaveIfRequired(anime);
     }
 
     /**
@@ -73,6 +85,7 @@ public class AnimeService {
      * lazily on first access. Consider extracting enrichment into a dedicated
      * {@code EnrichmentService} if callers need a read-only path.
      */
+    //TODO: Think about refactoring this method
     private Anime enrichAndSaveIfRequired(Anime anime) {
         List<AnimeWatchProvider> missingProviders = activeProviders.stream()
                 .filter(provider -> !anime.hasLinkForSource(provider.getSource()))
@@ -137,17 +150,17 @@ public class AnimeService {
     }
 
     private boolean isCachedFailure(String cacheKey) {
-        if (providerCheckFailuresCache == null) {
+        if (providerFailuresCache == null) {
             return false;
         }
-        return providerCheckFailuresCache.get(cacheKey, Boolean.class) != null;
+        return providerFailuresCache.get(cacheKey, Boolean.class) != null;
     }
 
     private void cacheFailure(String cacheKey) {
-        if (providerCheckFailuresCache == null || cacheKey == null) {
+        if (providerFailuresCache == null || cacheKey == null) {
             return;
         }
-        providerCheckFailuresCache.put(cacheKey, Boolean.TRUE);
+        providerFailuresCache.put(cacheKey, Boolean.TRUE);
         log.debug("Cached provider failure for key '{}'", cacheKey);
     }
 }

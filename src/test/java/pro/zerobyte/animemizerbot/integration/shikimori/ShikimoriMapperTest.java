@@ -1,18 +1,17 @@
 package pro.zerobyte.animemizerbot.integration.shikimori;
 
-import pro.zerobyte.animemizerbot.core.service.JsonService;
-import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ClassPathResource;
 import pro.zerobyte.animemizerbot.config.JacksonConfig;
 import pro.zerobyte.animemizerbot.config.props.AnimeUrlProperties;
 import pro.zerobyte.animemizerbot.core.anime.Anime;
 import pro.zerobyte.animemizerbot.core.anime.AnimeSource;
 import pro.zerobyte.animemizerbot.integration.shikimori.dto.ShikimoriAnimeDto;
 import pro.zerobyte.animemizerbot.integration.shikimori.dto.ShikimoriAnimeRelatedDto;
-import org.springframework.core.io.ClassPathResource;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.io.InputStream;

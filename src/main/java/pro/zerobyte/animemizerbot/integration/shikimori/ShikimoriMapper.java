@@ -67,18 +67,12 @@ public class ShikimoriMapper {
      * Handles OffsetDateTime (from Shikimori API timestamps with timezone) and LocalDate.
      */
     private LocalDateTime toLocalDateTime(Object dateTime) {
-        if (dateTime == null) {
-            return null;
-        }
-        if (dateTime instanceof LocalDateTime ldt) {
-            return ldt;
-        }
-        if (dateTime instanceof OffsetDateTime odt) {
-            return odt.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime();
-        }
-        if (dateTime instanceof LocalDate ld) {
-            return ld.atStartOfDay();
-        }
-        throw new IllegalArgumentException("Unsupported date/time type: " + dateTime.getClass());
+        return switch (dateTime) {
+            case null -> null;
+            case LocalDateTime ldt -> ldt;
+            case OffsetDateTime odt -> odt.atZoneSameInstant(ZoneOffset.UTC).toLocalDateTime();
+            case LocalDate ld -> ld.atStartOfDay();
+            default -> throw new IllegalArgumentException("Unsupported date/time type: " + dateTime.getClass());
+        };
     }
 }

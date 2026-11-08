@@ -17,3 +17,7 @@ telegram:
   bot:
     token: "dummy-test-token"
     username: "dummy-test-bot"
+
+tavily:
+  api-key: "dummy-test-tavily-key"
+  base-url: https://api.tavily.com

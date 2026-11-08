@@ -49,7 +49,7 @@ class WatchlistServiceTest {
 
     private void stubAnimeEpisodes(int episodeCount) {
         Anime anime = new Anime(ANIME_ID, "test-anime", null, null, "Test Anime", "Тест", null,
-                null, null, null, false, false, false, episodeCount, null, null, null, null, null, null);
+                null, null, null, false, false, false, episodeCount, null, null, null, null, null, null, null);
         when(animeService.findById(ANIME_ID)).thenReturn(Optional.of(anime));
     }
 
@@ -299,7 +299,7 @@ class WatchlistServiceTest {
         void should_keepCurrentEpisode_when_completedAndEpisodeCountIsNull() {
             // Given
             Anime anime = new Anime(ANIME_ID, "test-anime", null, null, "Test Anime", "Тест", null,
-                    null, null, null, false, false, false, null, null, null, null, null, null, null);
+                    null, null, null, false, false, false, null, null, null, null, null, null, null, null);
             when(animeService.findById(ANIME_ID)).thenReturn(Optional.of(anime));
             Watchlist wl = newWatchlist(USER_ID, ANIME_ID, WatchStatus.WATCHING, 5);
             when(repository.findByTelegramUserIdAndAnimeId(USER_ID, ANIME_ID)).thenReturn(Optional.of(wl));

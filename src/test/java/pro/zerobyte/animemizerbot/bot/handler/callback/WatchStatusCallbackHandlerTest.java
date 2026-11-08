@@ -62,7 +62,7 @@ class WatchStatusCallbackHandlerTest {
 
     private Anime buildAnime(Long id, String publicId) {
         return new Anime(id, publicId, null, null, "Test Anime", "Тест", null,
-                null, null, null, false, false, false, 12, null, null, null, null, null, null);
+                null, null, null, false, false, false, 12, null, null, null, null, null, null, null);
     }
 
     private Watchlist buildWatchlist(Long animeId, WatchStatus status, int lastWatchedEpisode) {

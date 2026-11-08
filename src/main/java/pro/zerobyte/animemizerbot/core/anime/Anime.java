@@ -30,6 +30,7 @@ public record Anime(
         LocalDate releasedOn,
         LocalDateTime updatedAt,
         LocalDateTime nextEpisodeAt,
+        String watchUrl,
         @MappedCollection(idColumn = "anime_id") Set<AnimeLink> links
 ) {
     public boolean hasLinkForSource(AnimeSource source) {
@@ -47,18 +48,24 @@ public record Anime(
     public Anime withId(Long newId) {
         return new Anime(newId, publicId, prequelPublicId, sequelPublicId, name, russianName,
                 englishName, description, posterUrl, kind, isReleased, isAnons, isOngoing,
-                episodes, episodesAired, airedOn, releasedOn, updatedAt, nextEpisodeAt, links);
+                episodes, episodesAired, airedOn, releasedOn, updatedAt, nextEpisodeAt, watchUrl, links);
     }
 
     public Anime withDescription(String newDescription) {
         return new Anime(id, publicId, prequelPublicId, sequelPublicId, name, russianName,
                 englishName, newDescription, posterUrl, kind, isReleased, isAnons, isOngoing,
-                episodes, episodesAired, airedOn, releasedOn, updatedAt, nextEpisodeAt, links);
+                episodes, episodesAired, airedOn, releasedOn, updatedAt, nextEpisodeAt, watchUrl, links);
     }
 
     public Anime withLinks(Set<AnimeLink> newLinks) {
         return new Anime(id, publicId, prequelPublicId, sequelPublicId, name, russianName,
                 englishName, description, posterUrl, kind, isReleased, isAnons, isOngoing,
-                episodes, episodesAired, airedOn, releasedOn, updatedAt, nextEpisodeAt, newLinks);
+                episodes, episodesAired, airedOn, releasedOn, updatedAt, nextEpisodeAt, watchUrl, newLinks);
+    }
+
+    public Anime withWatchUrl(String newWatchUrl) {
+        return new Anime(id, publicId, prequelPublicId, sequelPublicId, name, russianName,
+                englishName, description, posterUrl, kind, isReleased, isAnons, isOngoing,
+                episodes, episodesAired, airedOn, releasedOn, updatedAt, nextEpisodeAt, newWatchUrl, links);
     }
 }

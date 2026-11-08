@@ -7,8 +7,7 @@ import java.util.Map;
 
 @ConfigurationProperties(prefix = "app")
 public record AnimeUrlProperties(
-        Map<AnimeSource, String> animeSources,
-        String watchUrlTemplate
+        Map<AnimeSource, String> animeSources
 ) {
 
     public String getUrlFor(AnimeSource source) {

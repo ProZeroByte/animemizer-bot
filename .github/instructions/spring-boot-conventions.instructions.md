@@ -6,7 +6,7 @@ applyTo: 'src/**'
 
 ## Project Context
 
-This is a **Telegram bot** (Animemizer Bot) that helps users discover anime by integrating with multiple anime databases (Shikimori, AnimEgo, Anilibria, YummyAnime). Built with **Spring Boot 4.0.6** and **Java 26** using virtual threads, Jetty server, and Maven.
+This is a **Telegram bot** (Animemizer Bot) that helps users discover anime by integrating with Shikimori (anime data) and Tavily (watch link search). Built with **Spring Boot 4.0.6** and **Java 26** using virtual threads, Jetty server, and Maven.
 
 ## Tech Stack
 
@@ -16,7 +16,7 @@ This is a **Telegram bot** (Animemizer Bot) that helps users discover anime by i
 - **Caffeine** cache with Spring Cache abstraction
 - **telegrambots 9.6.0** (long-polling + webhook)
 - **Jetty** (not Tomcat)
-- **Jsoup** for HTML scraping (AnimeGo, YummyAnime providers)
+- **Jsoup** for HTML scraping (legacy — no longer used by active integrations)
 - **JUnit 6** + AssertJ for testing
 
 ## Mandatory Coding Rules
@@ -114,24 +114,20 @@ Telegram Update → PollingBot / WebhookController
 4. For callbacks: use `AnimemizerBotCallback` enum for prefix-based routing
 5. Spring auto-discovers via `@Component` with list injection in `BotUpdateProcessor`
 
-### Adding a New Integration (Anime Provider)
+### Adding a New Integration (Watch Link Resolver)
 
 1. Create package: `integration/{provider}/`
 2. DTOs in `dto/` as Records matching the provider's API response
-3. `{Provider}Client` — HTTP interface using `@HttpExchange` + `@GetExchange` (for JSON APIs like Shikimori, Anilibria)
-   - Or use Jsoup directly in the Provider class (for scraping sites like AnimeGo, YummyAnime)
-4. `{Provider}Mapper` — converts provider DTOs to `Anime` domain model (only when needed, e.g. Shikimori)
-5. `{Provider}Provider` — implements `AnimeWatchProvider` interface (`getSource()`, `findExternalId(Anime)`)
-6. Add provider URL config to `application.yaml` under `app.anime-sources`
+3. `{Provider}Client` — HTTP interface using `@HttpExchange` + `@PostExchange`/`@GetExchange` (for JSON APIs like Shikimori, Tavily)
+4. `{Provider}WatchLinkResolver` — implements the `WatchLinkResolver` interface (`resolveWatchUrl(Anime)`)
+5. Add provider config to `application.yaml`
 
 ### HTTP Client Pattern
 
-For JSON API providers (Shikimori, Anilibria), use Spring's declarative HTTP clients:
-- Interface annotated with `@HttpExchange` and `@GetExchange` methods
+For JSON API providers (Shikimori, Tavily), use Spring's declarative HTTP clients:
+- Interface annotated with `@HttpExchange` and `@GetExchange`/`@PostExchange` methods
 - Configured via `RestClient` beans and `HttpServiceProxyFactory` in `HttpClientConfig`
 - Registered with `@ImportHttpServices`
-
-For scraping-based providers (AnimeGo, YummyAnime), use Jsoup with user-agent rotation from `NetworkProperties`.
 
 ### File Organization
 
@@ -144,16 +140,16 @@ For scraping-based providers (AnimeGo, YummyAnime), use Jsoup with user-agent ro
 | Text handlers | `bot/handler/text/` |
 | Message building | `bot/message/AnimeMessageBuilder.java` |
 | Telegram utilities | `bot/message/TelegramMessageUtils.java` |
-| Integrations | `integration/{shikimori,animego,anilibria,yummyanime}` |
+| Integrations | `integration/{shikimori,tavily}` |
 | Domain models | `core/anime/` |
 | Watchlist tracking | `core/watchlist/` |
 | Telegram user state | `core/telegramuser/` |
 | JSON utilities | `core/service/JsonService.java` |
-| REST controllers | `controller/` (WebhookController, WatchRedirectController) |
+| REST controllers | `controller/` (WebhookController) |
 | Exception handling | `exception/GlobalExceptionHandler.java` |
 | HTTP client config | `config/HttpClientConfig.java` |
 | Cache config | `config/CacheConfig.java` |
-| Config properties | `config/props/` (TelegramBotProperties, AnimeUrlProperties, NetworkProperties) |
+| Config properties | `config/props/` (TelegramBotProperties, AnimeUrlProperties, TavilyProperties) |
 
 ## Testing Conventions
 

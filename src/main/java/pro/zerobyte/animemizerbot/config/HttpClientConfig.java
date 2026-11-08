@@ -11,9 +11,10 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.support.RestClientAdapter;
 import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 import pro.zerobyte.animemizerbot.config.props.AnimeUrlProperties;
+import pro.zerobyte.animemizerbot.config.props.TavilyProperties;
 import pro.zerobyte.animemizerbot.core.anime.AnimeSource;
-import pro.zerobyte.animemizerbot.integration.anilibria.AnilibriaClient;
 import pro.zerobyte.animemizerbot.integration.shikimori.ShikimoriClient;
+import pro.zerobyte.animemizerbot.integration.tavily.TavilyClient;
 
 import java.net.http.HttpClient;
 import java.time.Duration;
@@ -54,24 +55,24 @@ public class HttpClientConfig {
     }
 
     @Bean
-    public RestClient anilibriaRestClient(AnimeUrlProperties properties) {
+    public RestClient tavilyRestClient(TavilyProperties properties) {
         HttpClient httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(5))
                 .build();
         return RestClient.builder()
-                .baseUrl(properties.getUrlFor(AnimeSource.ANILIBRIA))
+                .baseUrl(properties.resolvedBaseUrl())
                 .requestFactory(new JdkClientHttpRequestFactory(httpClient))
                 .defaultHeader(USER_AGENT, "Animemizer-bot")
                 .defaultHeader(ACCEPT, MediaType.APPLICATION_JSON_VALUE)
-                .defaultHeader("Accept-Encoding", "gzip, deflate")
+                .defaultHeader("Authorization", "Bearer " + properties.apiKey())
                 .build();
     }
 
     @Bean
-    public AnilibriaClient anilibriaClient(RestClient anilibriaRestClient) {
+    public TavilyClient tavilyClient(RestClient tavilyRestClient) {
         return HttpServiceProxyFactory
-                .builderFor(RestClientAdapter.create(anilibriaRestClient))
+                .builderFor(RestClientAdapter.create(tavilyRestClient))
                 .build()
-                .createClient(AnilibriaClient.class);
+                .createClient(TavilyClient.class);
     }
 }

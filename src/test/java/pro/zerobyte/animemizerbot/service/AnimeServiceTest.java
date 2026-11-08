@@ -10,20 +10,17 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import pro.zerobyte.animemizerbot.core.anime.Anime;
-import pro.zerobyte.animemizerbot.core.anime.AnimeLink;
 import pro.zerobyte.animemizerbot.core.anime.AnimeRepository;
 import pro.zerobyte.animemizerbot.core.anime.AnimeService;
-import pro.zerobyte.animemizerbot.core.anime.AnimeSource;
-import pro.zerobyte.animemizerbot.core.anime.AnimeWatchProvider;
+import pro.zerobyte.animemizerbot.core.anime.WatchLinkResolver;
 import pro.zerobyte.animemizerbot.integration.shikimori.ShikimoriConnector;
 
-import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -49,19 +46,21 @@ class AnimeServiceTest {
     @Mock
     private Cache cache;
 
-    private List<AnimeWatchProvider> activeProviders;
+    private WatchLinkResolver watchLinkResolver;
     private AnimeService animeService;
 
     @BeforeEach
     void setUp() {
-        activeProviders = Collections.emptyList();
-        when(cacheManager.getCache("providerCheckFailures")).thenReturn(cache);
-        animeService = new AnimeService(repository, shikimoriConnector, activeProviders, cacheManager);
+        watchLinkResolver = mock(WatchLinkResolver.class);
+        lenient().when(cacheManager.getCache("providerFailures")).thenReturn(cache);
+        lenient().when(cacheManager.getCache("animeById")).thenReturn(cache);
+        lenient().when(repository.save(any(Anime.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        animeService = new AnimeService(repository, shikimoriConnector, watchLinkResolver, cacheManager);
     }
 
     private Anime newAnime(Long id, String publicId, String name, String russianName) {
         return new Anime(id, publicId, null, null, name, russianName, null,
-                null, null, null, false, false, false, 12, null, null, null, null, null, null);
+                null, null, null, false, false, false, 12, null, null, null, null, null, null, null);
     }
 
     @Nested
@@ -84,23 +83,16 @@ class AnimeServiceTest {
 
         @Test
         void should_callEnrichment_when_animeFound() {
-            // Given - anime with no links, and a provider that needs enrichment
+            // Given - anime with no watch url, and a resolver that returns a link
             Anime anime = newAnime(ANIME_ID, PUBLIC_ID, ANIME_NAME, RUSSIAN_NAME);
             when(repository.findById(ANIME_ID)).thenReturn(Optional.of(anime));
-
-            AnimeWatchProvider provider = mock(AnimeWatchProvider.class);
-            when(provider.getSource()).thenReturn(AnimeSource.ANILIBRIA);
-            when(provider.findExternalId(anime)).thenReturn(Optional.empty());
-
-            List<AnimeWatchProvider> providers = List.of(provider);
-            when(cacheManager.getCache("providerCheckFailures")).thenReturn(cache);
-            AnimeService serviceWithProviders = new AnimeService(repository, shikimoriConnector, providers, cacheManager);
+            when(watchLinkResolver.resolveWatchUrl(anime)).thenReturn(Optional.of("https://kinokino.win/series/1"));
 
             // When
-            serviceWithProviders.findById(ANIME_ID);
+            animeService.findById(ANIME_ID);
 
             // Then
-            verify(provider).findExternalId(anime);
+            verify(watchLinkResolver).resolveWatchUrl(anime);
         }
 
         @Test

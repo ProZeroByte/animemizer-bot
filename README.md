@@ -26,7 +26,7 @@ A Telegram bot for anime discovery and watchlist tracking. Search for anime by t
 
 ## Overview
 
-Animemizer Bot is a Spring Boot application that integrates with multiple anime databases — Shikimori, Anilibria, AnimeGo, and YummyAnime — to provide a unified anime search and tracking experience through Telegram. Users can search for anime, track episode progress with inline keyboard buttons, set watch statuses, navigate prequel/sequel chains, batch-search multiple titles, and get direct links to watch anime on external sites.
+Animemizer Bot is a Spring Boot application that integrates with Shikimori for anime data and Tavily for web search, providing a unified anime search and tracking experience through Telegram. Users can search for anime, track episode progress with inline keyboard buttons, set watch statuses, navigate prequel/sequel chains, batch-search multiple titles, and get a direct watch link for each anime.
 
 The bot operates in two modes: **long polling** (development) and **webhook** (production), selected via Spring profiles.
 
@@ -38,8 +38,8 @@ The bot operates in two modes: **long polling** (development) and **webhook** (p
 - **Watch Status Management** — set status to Watching, Planned, Completed, Rewatching, On Hold, or Dropped via inline buttons
 - **Prequel/Sequel Navigation** — navigate anime franchise chains with directional buttons
 - **Watchlist** — view all tracked anime in a paginated list sorted alphabetically
-- **Watch Links** — direct links to anime on AnimeGo, Anilibria, and YummyAnime embedded in each anime card
-- **Multi-Provider Enrichment** — anime records are automatically enriched with external IDs from all configured providers on first access
+- **Watch Link** — a single "Смотреть" button with a direct watch link resolved via Tavily web search
+- **Watch Link Enrichment** — anime records are automatically enriched with a watch link on first access
 - **Placeholder-then-Replace** — slow operations (search, list) show an immediate loading indicator, then replace it with the actual result
 
 ## Telegram Bot Commands
@@ -67,18 +67,24 @@ When an anime is found, the bot displays an interactive card with these button g
 | `⬅️ Предыстория` | Load the prequel anime (if available) |
 | `Продолжение ➡️` | Load the sequel anime (if available) |
 | `👀` / `📋` / `✅` / `🔄` / `⏸` / `❌` | Set watch status (Watching / Planned / Completed / Rewatching / On Hold / Dropped) |
-| `▶️ AnimeGO` / `▶️ AniLiberty` / `▶️ YummyAnime` | Direct links to watch on external sites |
+| `▶️ Смотреть` | Direct watch link (shown only when a link was resolved) |
 
 ## Supported Anime Providers
 
 | Provider | Role | Integration Method |
 |----------|------|-------------------|
 | **Shikimori** | Primary source — search, details, relations | `@HttpExchange` REST client (JSON API) |
-| **Anilibria** | External ID lookup for watch links | `@HttpExchange` REST client (JSON API) |
-| **AnimeGo** | External ID lookup for watch links | Jsoup HTML scraping with user-agent rotation |
-| **YummyAnime** | External ID lookup for watch links | Jsoup HTML scraping with DLE session/cookie management |
+| **Tavily** | Watch link resolution via web search | `@HttpExchange` REST client (JSON API) |
 
-**Shikimori** is the primary data source — all anime search and detail fetching goes through its API. The other providers are used to resolve external IDs for watch link buttons. Failed provider lookups are cached for 24 hours to avoid repeated scraping.
+**Shikimori** is the primary data source — all anime search and detail fetching goes through its API. **Tavily** is used to resolve a single watch link for each anime. Failed lookups are cached for 24 hours to avoid repeated searches.
+
+### Watch Link Resolution
+
+`TavilyWatchLinkResolver` resolves a single watch URL in this order:
+
+1. Search for a direct `kinopoisk.ru` link, then rewrite the domain to `kinokino.win`.
+2. If not found, search for a link on `aniliberty.top`.
+3. If still not found, run a general web search with the Russian title.
 
 ## Architecture
 
@@ -120,9 +126,9 @@ For slow operations (search, list, batch, prequel/sequel navigation):
 3. Edit the placeholder in-place with the result (`EditMessageText`, `EditMessageCaption`, or `EditMessageMedia`)
 4. If the placeholder send fails, return the result directly as a fallback
 
-### Multi-Provider Enrichment
+### Watch Link Enrichment
 
-`AnimeService.enrichAndSaveIfRequired()` is called on every anime fetch. It checks all `AnimeWatchProvider` implementations for missing external links and fills them. Results are persisted to the database. Failed lookups are cached in the `providerCheckFailures` Caffeine cache for 24 hours.
+`AnimeService.enrichAndSaveIfRequired()` is called on every anime fetch. It resolves a watch link via `WatchLinkResolver` (Tavily) when the anime has none, and persists the result. Failed lookups are cached in the `providerFailures` Caffeine cache for 24 hours.
 
 ### Architecture Diagrams
 
@@ -141,12 +147,10 @@ graph TB
     CbH --> AS
     CbH --> WS[WatchlistService]
     AS --> SC[ShikimoriConnector]
-    AS --> AP[AnimeWatchProvider x3]
+    AS --> WR[WatchLinkResolver]
     AS --> DB[(PostgreSQL)]
     SC -->|REST| Shiki[Shikimori API]
-    AP -->|REST| Ani[Anilibria API]
-    AP -->|Scraping| AG[AnimeGo]
-    AP -->|Scraping| YU[YummyAnime]
+    WR -->|REST| Tav[Tavily API]
     Bot -->|Response| TG
 ```
 
@@ -173,7 +177,7 @@ sequenceDiagram
     SC->>SC: ShikimoriClient.searchAnime
     SC->>SC: ShikimoriClient.getAnimeDetails + getRelatedAnimes
     SC-->>AS: Anime (with links)
-    AS->>AS: enrichAndSaveIfRequired (fill provider links)
+    AS->>AS: enrichAndSaveIfRequired (resolve watch link)
     AS->>DB: save(anime)
     AS-->>S: Optional.of(anime)
     S->>TG: EditMessageMedia (replace placeholder with card)
@@ -187,9 +191,7 @@ graph LR
     RP -->|HTTP| BOT[animemizer-bot<br/>Jetty :8080]
     BOT -->|JDBC| PG[(PostgreSQL)]
     BOT -->|REST| SH[Shikimori]
-    BOT -->|REST| AL[Anilibria]
-    BOT -->|HTTP| AG[AnimeGo]
-    BOT -->|HTTP| YA[YummyAnime]
+    BOT -->|REST| TV[Tavily]
 
     subgraph Docker
         BOT
@@ -238,25 +240,24 @@ animemizer-bot/
 │   │       ├── AnimeMessageBuilder         # Builds caption text and inline keyboards
 │   │       └── TelegramMessageUtils        # Markdown escaping, description cleaning
 │   ├── controller/
-│   │   ├── WebhookController               # Webhook endpoint (prod profile only)
-│   │   └── WatchRedirectController         # /api/watch redirect to external sites
+│   │   └── WebhookController               # Webhook endpoint (prod profile only)
 │   ├── config/
 │   │   ├── TelegramBotConfig               # TelegramClient, long-polling (dev), webhook (prod)
 │   │   ├── HttpClientConfig                # RestClient + declarative HTTP clients
-│   │   ├── CacheConfig                     # 4 Caffeine caches
+│   │   ├── CacheConfig                     # 3 Caffeine caches
 │   │   ├── JacksonConfig                   # Jackson 3.x + 2.x mappers
 │   │   ├── WebConfig                       # Custom Telegram JSON converter
 │   │   ├── PropertiesConfig                # @EnableConfigurationProperties
 │   │   └── props/
 │   │       ├── TelegramBotProperties       # Bot token, username, webhook config
-│   │       ├── AnimeUrlProperties          # Provider base URLs + watch URL template
-│   │       └── NetworkProperties           # HTTP timeout + user-agent rotation
+│   │       ├── AnimeUrlProperties          # Provider base URLs
+│   │       └── TavilyProperties            # Tavily API key + base URL
 │   ├── core/
 │   │   ├── anime/
 │   │   │   ├── Anime                       # Domain entity (record + @Table)
 │   │   │   ├── AnimeLink                   # External link entity (@MappedCollection)
-│   │   │   ├── AnimeSource                 # Enum: SHIKIMORI, ANILIBRIA, ANIMEGO, YUMMYANIME
-│   │   │   ├── AnimeWatchProvider          # Interface for provider integrations
+│   │   │   ├── AnimeSource                 # Enum: SHIKIMORI
+│   │   │   ├── WatchLinkResolver           # Interface for watch link resolution
 │   │   │   ├── AnimeRepository             # Spring Data JDBC repository
 │   │   │   ├── AnimeService                # Main service: search, save, enrichment
 │   │   │   └── AnimeListService            # Paginated watchlist logic
@@ -278,15 +279,10 @@ animemizer-bot/
 │   │   │   ├── ShikimoriConnector          # Async fetch + caching
 │   │   │   ├── ShikimoriMapper             # DTO → domain mapping
 │   │   │   └── dto/                        # ShikimoriAnimeDto, ShikimoriAnimeRelatedDto
-│   │   ├── anilibria/
-│   │   │   ├── AnilibriaClient             # @HttpExchange REST client
-│   │   │   ├── AnilibriaProvider           # AnimeWatchProvider impl
-│   │   │   └── dto/                        # AnilibriaReleaseDto
-│   │   ├── animego/
-│   │   │   └── AnimegoProvider             # Jsoup scraping provider
-│   │   └── yummyanime/
-│   │       ├── YummyAnimeProvider          # Jsoup scraping + DLE session
-│   │       └── YummyAnimeDleSessionManager # Cookie/session management
+│   │   └── tavily/
+│   │       ├── TavilyClient                # @HttpExchange REST client
+│   │       ├── TavilyWatchLinkResolver     # WatchLinkResolver impl (3-step search)
+│   │       └── dto/                        # TavilySearchRequest, TavilySearchResponse
 │   └── exception/
 │       ├── GlobalExceptionHandler          # @RestControllerAdvice
 │       ├── JsonDeserializationException
@@ -330,7 +326,7 @@ animemizer-bot/
 
 Configuration is split across three files:
 
-- `application.yaml` — shared settings (database, Telegram tokens, provider URLs, cache, network)
+- `application.yaml` — shared settings (database, Telegram tokens, provider URLs, Tavily, cache)
 - `application-dev.yaml` — dev-specific (DEBUG logging for app + Telegram)
 - `application-prod.yaml` — prod-specific (webhook path + base URL, INFO logging)
 
@@ -346,6 +342,7 @@ Configuration is split across three files:
 | `DATASOURCE_URL` | PostgreSQL JDBC URL | `jdbc:postgresql://localhost:5432/animemizer` |
 | `DATASOURCE_USERNAME` | Database username | `<DATABASE_USERNAME>` |
 | `DATASOURCE_PASSWORD` | Database password | `<DATABASE_PASSWORD>` |
+| `TAVILY_API_KEY` | Tavily API key for watch link search | `<TAVILY_API_KEY>` |
 
 ### Required for Production (`prod` profile)
 
@@ -357,6 +354,7 @@ Configuration is split across three files:
 ### Notes
 
 - `TelegramBotProperties` uses `@Validated` + `@NotBlank` on `token` and `username` — the application will **fail to start** if these are missing.
+- `TavilyProperties` uses `@Validated` + `@NotBlank` on `apiKey` — the application will **fail to start** if `TAVILY_API_KEY` is missing.
 - Tests use dummy values from `application-test.yaml` — no environment variables are needed to run `mvn test`.
 - The `secretToken` field in `TelegramBotProperties` is optional (no `@NotBlank`).
 
@@ -380,6 +378,7 @@ export TELEGRAM_BOT_API_SECRET_TOKEN=<your-secret-token>
 export DATASOURCE_URL=jdbc:postgresql://localhost:5432/animemizer
 export DATASOURCE_USERNAME=<db-username>
 export DATASOURCE_PASSWORD=<db-password>
+export TAVILY_API_KEY=<your-tavily-api-key>
 ```
 
 ### 3. Run with Maven Wrapper
@@ -430,7 +429,7 @@ The test suite covers:
 - Handler logic (Start, Help, Stop, Search, Episode, Relation, WatchStatus, Callback parsing)
 - Service layer (AnimeService, WatchlistService, TelegramUserService, ShikimoriConnector)
 - Update routing (`BotUpdateProcessorTest`)
-- REST controller (`WatchRedirectControllerTest`)
+- Tavily watch link resolution (`TavilyWatchLinkResolverTest`)
 - Message building (`AnimeMessageBuilderTest`, `TelegramMessageUtilsTest`)
 
 ## Building the Application
@@ -514,7 +513,7 @@ This script requires SSH access to the target server and is intended for interna
 
 - The bot searches by Russian name, English name, then original name (case-insensitive)
 - If not found locally, it queries Shikimori's API
-- Provider enrichment failures are cached for 24 hours — a provider that was temporarily down won't be retried until the cache expires
+- Watch link resolution failures are cached for 24 hours — an anime whose link could not be found won't be retried until the cache expires
 
 ### Batch search is slow
 
@@ -532,7 +531,6 @@ This script requires SSH access to the target server and is intended for interna
 - The webhook endpoint validates the `X-Telegram-Bot-Api-Secret-Token` header against the configured `TELEGRAM_BOT_API_SECRET_TOKEN`
 - The Docker container runs as a non-root user (`botuser`)
 - The Docker filesystem is read-only with a tmpfs mount for `/tmp`
-- Provider requests use randomized user-agent headers to avoid blocking
 - Input length limits: commands max 2000 chars, search queries max 255 chars
 - Never commit secrets — the `.env` file is in `.gitignore`
 
@@ -560,18 +558,16 @@ This script requires SSH access to the target server and is intended for interna
 2. Create handler class in `bot/handler/callback/` implementing `CallbackHandler`
 3. Use `canHandle(callbackData)` to match by prefix
 
-### Adding a New Anime Provider
+### Adding a New Watch Link Resolver
 
 1. Create package under `integration/{provider}/`
-2. Implement `AnimeWatchProvider` interface (`getSource()`, `findExternalId()`)
-3. For JSON APIs: create `@HttpExchange` client interface and register in `HttpClientConfig`
-4. For scraping: use Jsoup directly with `NetworkProperties.getRandomAgent()`
-5. Add provider URL to `app.anime-sources` in `application.yaml`
+2. Implement the `WatchLinkResolver` interface (`resolveWatchUrl(Anime)`)
+3. For JSON APIs: create an `@HttpExchange` client interface and register it in `HttpClientConfig`
+4. Add provider config to `application.yaml`
 
 ## Known Limitations and TODOs
 
 - **Test schema sync** — the test `schema.sql` must be manually updated when domain entities change
 - **`AnimeService` refactoring** — a TODO comment in the source notes the service mixes read and write concerns (enrichment happens on read paths)
-- **Provider failure caching** — the `WatchRedirectController` bypasses the enrichment failure cache, so consistently failing providers will be retried on every redirect request
 - **No CI/CD pipeline** — there is no CI/CD configuration in the repository
 - **No license file** — no license has been specified for this project

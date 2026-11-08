@@ -2,11 +2,9 @@
 
 ## Project Overview
 
-Telegram bot for anime discovery. Integrates multiple anime databases:
+Telegram bot for anime discovery. Integrates:
 - **Shikimori** — primary source, full anime data via REST API
-- **Anilibria** — additional metadata via REST API
-- **AnimeGo** — scraping with Jsoup
-- **YummyAnime** — scraping with Jsoup + DLE session/cookie management
+- **Tavily** — watch link resolution via web search
 
 ## Tech Stack
 
@@ -15,9 +13,9 @@ Telegram bot for anime discovery. Integrates multiple anime databases:
 - **Jetty** (NOT Tomcat) — Tomcat is excluded in pom.xml
 - **Jackson 3.1.1** (`jackson.version` property) — this is Jackson 3.x, NOT 2.x
 - **PostgreSQL** (prod) / **H2** (test) via `spring-boot-starter-data-jdbc` (NOT JPA)
-- **Caffeine** cache — 4 named caches in `CacheConfig.java`
+- **Caffeine** cache — 3 named caches in `CacheConfig.java`
 - **telegrambots 9.6.0** — long-polling + webhook
-- **Jsoup** for HTML scraping (AnimeGo, YummyAnime)
+- **Jsoup** for HTML scraping (legacy — no longer used by active integrations)
 - **JUnit 6** + AssertJ for testing
 
 ## Build & Run
@@ -81,15 +79,15 @@ For slow operations (search, navigation, list):
 3. Edit placeholder in-place (`EditMessageText` / `EditMessageCaption` / `EditMessageMedia`)
 4. If placeholder send fails, return fallback result directly
 
-### Multi-Provider Enrichment
+### Watch Link Enrichment
 
-`AnimeService.enrichAndSaveIfRequired()` fills missing provider links on every anime fetch. Failed lookups cached 24h in `providerCheckFailures`.
+`AnimeService.enrichAndSaveIfRequired()` resolves a single watch link via `WatchLinkResolver` (Tavily) on every anime fetch. Failed lookups cached 24h in `providerFailures`.
 
 ### Domain Model
 
 - All entities are **Records** with `@Table` / `@MappedCollection` (Spring Data JDBC, NOT JPA)
-- `Anime` has `withId()`, `withDescription()`, `withLinks()` copy methods (immutable Records)
-- `AnimeSource` prefixes: `shikimori_`, `anilibria_`, `animego_`, `yummyanime_` — use `createPublicId()` / `extractIdFromPublicId()`
+- `Anime` has `withId()`, `withDescription()`, `withLinks()`, `withWatchUrl()` copy methods (immutable Records)
+- `AnimeSource` prefix: `shikimori_` — use `createPublicId()` / `extractIdFromPublicId()`
 - `WatchStatus` has transition logic: `onAllEpisodesWatched()`, `onRewatchStarted()`, `isTerminal()`
 
 ### HTTP Client Setup
@@ -154,7 +152,7 @@ var anime = animeService.findById(animeId);
 | Text handlers | `bot/handler/text/` |
 | Message building | `bot/message/AnimeMessageBuilder.java` |
 | Telegram utilities | `bot/message/TelegramMessageUtils.java` |
-| Integrations | `integration/{shikimori,animego,anilibria,yummyanime}` |
+| Integrations | `integration/{shikimori,tavily}` |
 | Domain models | `core/anime/` |
 | Watchlist tracking | `core/watchlist/` |
 | Telegram user state | `core/telegramuser/` |

@@ -1,10 +1,7 @@
 package pro.zerobyte.animemizerbot.bot.message;
 
 import pro.zerobyte.animemizerbot.bot.handler.AnimemizerBotCallback;
-import pro.zerobyte.animemizerbot.config.props.AnimeUrlProperties;
 import pro.zerobyte.animemizerbot.core.anime.Anime;
-import pro.zerobyte.animemizerbot.core.anime.AnimeLink;
-import pro.zerobyte.animemizerbot.core.anime.AnimeSource;
 import pro.zerobyte.animemizerbot.core.watchlist.WatchStatus;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -20,12 +17,6 @@ import java.util.stream.Gatherers;
 
 @Component
 public class AnimeMessageBuilder {
-
-    private final AnimeUrlProperties animeUrlProperties;
-
-    public AnimeMessageBuilder(AnimeUrlProperties animeUrlProperties) {
-        this.animeUrlProperties = animeUrlProperties;
-    }
 
     public @NonNull String buildCaption(@NonNull Anime anime, Integer userWatchedEpisodes, @Nullable WatchStatus watchStatus) {
         String title = Objects.requireNonNullElse(anime.russianName(), anime.name());
@@ -95,7 +86,10 @@ public class AnimeMessageBuilder {
 
         rows.addAll(createStatusRows(anime));
 
-        rows.addAll(createWatchLinkRows(anime));
+        InlineKeyboardRow watchRow = createWatchRow(anime);
+        if (!watchRow.isEmpty()) {
+            rows.add(watchRow);
+        }
 
         return new InlineKeyboardMarkup(rows);
     }
@@ -163,38 +157,14 @@ public class AnimeMessageBuilder {
         };
     }
 
-    private List<InlineKeyboardRow> createWatchLinkRows(Anime anime) {
-        if (anime.links() == null || anime.links().isEmpty()) {
-            return List.of();
+    private InlineKeyboardRow createWatchRow(Anime anime) {
+        if (anime.watchUrl() == null || anime.watchUrl().isBlank()) {
+            return new InlineKeyboardRow();
         }
 
-        // Автоматическая разбивка кнопок по 2 в ряд с помощью Stream Gatherers
-        return anime.links().stream()
-                .map(AnimeLink::source)
-                .distinct() // Защита от дубликатов источников
-                .filter(this::isSupportedSource)
-                .map(source -> InlineKeyboardButton.builder()
-                        .text(getSourceDisplayName(source))
-                        .url(animeUrlProperties.watchUrlTemplate().formatted(source.name(), anime.publicId()))
-                        .build())
-                .gather(Gatherers.windowFixed(2)) // Группируем элементы списка по 2
-                .map(InlineKeyboardRow::new)
-                .toList();
-    }
-
-    private boolean isSupportedSource(AnimeSource source) {
-        return switch (source) {
-            case ANIMEGO, ANILIBRIA, YUMMYANIME -> true;
-            default -> false;
-        };
-    }
-
-    private String getSourceDisplayName(AnimeSource source) {
-        return switch (source) {
-            case ANIMEGO -> "▶️ AnimeGO";
-            case ANILIBRIA -> "▶️ AniLiberty";
-            case YUMMYANIME -> "▶️ YummyAnime";
-            default -> "▶️ " + source.name();
-        };
+        return new InlineKeyboardRow(InlineKeyboardButton.builder()
+                .text("▶️ Смотреть")
+                .url(anime.watchUrl())
+                .build());
     }
 }

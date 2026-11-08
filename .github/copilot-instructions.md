@@ -21,7 +21,7 @@ There is no dedicated lint task configured in `pom.xml`. Treat `mvn test` and `m
 
 ## High-level architecture
 
-This is a Spring Boot Telegram bot that searches anime via Shikimori and enriches results with watch links from Anilibria, AnimeGo, and YummyAnime.
+This is a Spring Boot Telegram bot that searches anime via Shikimori and resolves a watch link via Tavily web search.
 
 - `Application.java` boots the app and enables scheduling.
 - `TelegramBotService` is the entry point for Telegram updates in both long-polling (`dev`) and webhook (`prod`) modes.
@@ -30,8 +30,8 @@ This is a Spring Boot Telegram bot that searches anime via Shikimori and enriche
   - `CommandHandler` for `/start`, `/help`, `/stop`, `/list`, `/batch`
   - `CallbackHandler` for inline keyboard actions like episode changes, watch-state updates, and related anime navigation
   - `TextHandler` for free-form anime search and `/search`
-- `AnimeService` owns fetch/save logic and applies multi-provider enrichment before persisting anime data.
-- `ShikimoriConnector` and `ShikimoriClient` are the primary data source; the other providers usually resolve only external watch IDs.
+- `AnimeService` owns fetch/save logic and resolves a watch link before persisting anime data.
+- `ShikimoriConnector` and `ShikimoriClient` are the primary data source; `TavilyWatchLinkResolver` resolves the watch link.
 - `WatchlistService` and repository-backed `core/watchlist` model track per-user progress and statuses.
 - Data access uses Spring Data JDBC (not JPA), with PostgreSQL in production and H2 in tests.
 
@@ -58,10 +58,9 @@ The non-obvious routing behavior matters: text handlers are evaluated before com
 ### Provider integration model
 
 - Shikimori is the main source of anime data via `@HttpExchange` REST clients and mapper classes.
-- Anilibria and Shikimori JSON integrations use declarative HTTP clients configured via `HttpClientConfig`.
-- AnimeGo and YummyAnime rely on Jsoup scraping and rotate user agents from configuration.
-- Provider link enrichment is centralized through the `AnimeWatchProvider` implementations; failed provider checks are cached to avoid repeated scraping.
-- Watch URLs are generated using the configured `app.*` properties and source-specific public IDs.
+- Tavily is used to resolve a single watch link via `@HttpExchange` REST client configured in `HttpClientConfig`.
+- Watch link resolution is centralized through the `WatchLinkResolver` interface; failed lookups are cached to avoid repeated searches.
+- The watch link is stored on the `Anime` entity (`watchUrl`) and rendered as a single "Смотреть" button.
 
 ### Testing and configuration
 
@@ -88,7 +87,7 @@ For a targeted change in bot behavior, start with the routing and service layer:
 - `src/main/java/pro/zerobyte/animemizerbot/config/HttpClientConfig.java`
 - `src/main/java/pro/zerobyte/animemizerbot/integration/shikimori/ShikimoriConnector.java`
 
-For a provider or watch-link change, read the relevant integration package and config properties next.
+For a watch-link change, read the `integration/tavily` package and `TavilyProperties` next.
 
 ## Relevant project docs
 

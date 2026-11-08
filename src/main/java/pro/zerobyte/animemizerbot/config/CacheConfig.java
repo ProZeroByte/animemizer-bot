@@ -24,13 +24,11 @@ public class CacheConfig {
 
     public static final String ANIME_BY_ID = "animeById";
     public static final String ANIME_BY_TITLE = "animeByTitle";
-    public static final String YUMMY_SESSIONS = "yummySessions";
     public static final String PROVIDER_FAILURES = "providerFailures";
 
     public enum CacheName {
         ANIME_BY_ID(CacheConfig.ANIME_BY_ID, Duration.ofHours(24), 1000),
         ANIME_BY_TITLE(CacheConfig.ANIME_BY_TITLE, Duration.ofHours(3), 500),
-        YUMMY_SESSIONS(CacheConfig.YUMMY_SESSIONS, Duration.ofMinutes(15), 100),
         PROVIDER_FAILURES(CacheConfig.PROVIDER_FAILURES, Duration.ofHours(24), 2000);
 
         private final String cacheName;

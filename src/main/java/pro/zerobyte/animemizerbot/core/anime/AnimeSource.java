@@ -3,10 +3,7 @@ package pro.zerobyte.animemizerbot.core.anime;
 import java.util.Optional;
 
 public enum AnimeSource {
-    SHIKIMORI("shikimori_"),
-    ANILIBRIA("anilibria_"),
-    ANIMEGO("animego_"),
-    YUMMYANIME("yummyanime_");
+    SHIKIMORI("shikimori_");
 
     private final String prefix;
     private final int prefixLength;

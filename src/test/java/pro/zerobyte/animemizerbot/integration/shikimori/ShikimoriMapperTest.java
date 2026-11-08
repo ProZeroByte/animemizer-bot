@@ -32,8 +32,7 @@ class ShikimoriMapperTest {
     @BeforeEach
     void setUp() {
         AnimeUrlProperties urlProperties = new AnimeUrlProperties(
-                Map.of(AnimeSource.SHIKIMORI, SHIKIMORI_BASE_URL),
-                "https://animemizer.bot/watch?source=%s&publicId=%s"
+                Map.of(AnimeSource.SHIKIMORI, SHIKIMORI_BASE_URL)
         );
         mapper = new ShikimoriMapper(urlProperties);
         JacksonConfig config = new JacksonConfig();

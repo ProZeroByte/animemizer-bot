@@ -1,6 +1,6 @@
 # AGENTS.md — Animemizer Bot
 
-Telegram bot for anime discovery. Integrates Shikimori (primary), Anilibria, AnimeGo, YummyAnime.
+Telegram bot for anime discovery. Integrates Shikimori (primary data source) and Tavily (watch link search).
 
 ## Tech Stack (exact versions)
 
@@ -11,7 +11,7 @@ Telegram bot for anime discovery. Integrates Shikimori (primary), Anilibria, Ani
 - **PostgreSQL** (prod) / **H2** (test) via `spring-boot-starter-data-jdbc` (not JPA)
 - **Caffeine** cache — 4 named caches configured in `CacheConfig.java`
 - **telegrambots 10.3.0** — `telegrambots-springboot-longpolling-starter` + `telegrambots-client-jetty-adapter`
-- **Jsoup** for HTML scraping (AnimeGo, YummyAnime providers)
+- **Jsoup** for HTML scraping (legacy — no longer used by active integrations)
 
 ## Build & Run
 
@@ -31,6 +31,7 @@ No single-test shortcut configured — standard `mvn test -Dtest=ClassName` work
 ```
 TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_USERNAME, TELEGRAM_BOT_API_SECRET_TOKEN
 DATASOURCE_URL, DATASOURCE_USERNAME, DATASOURCE_PASSWORD
+TAVILY_API_KEY
 TELEGRAM_BOT_WEBHOOK_PATH, TELEGRAM_BOT_WEBHOOK_BASE_URL (prod only)
 ```
 
@@ -75,23 +76,23 @@ For slow operations (search, navigation, list):
 3. Edit placeholder in-place (`EditMessageText` / `EditMessageCaption` / `EditMessageMedia`)
 4. If placeholder send fails, return fallback result directly
 
-### Multi-Provider Enrichment
+### Watch Link Enrichment
 
-`AnimeService.enrichAndSaveIfRequired()` is called on every anime fetch. It checks all `AnimeWatchProvider` implementations for missing links and fills them. Failed lookups are cached 24h in `providerCheckFailures` to avoid re-scraping.
+`AnimeService.enrichAndSaveIfRequired()` is called on every anime fetch. It resolves a single watch link via `WatchLinkResolver` when the anime has none, and persists it. Failed lookups are cached 24h in `providerFailures` to avoid repeated searches.
 
-**Providers:**
+**Integrations:**
 - **Shikimori**: `@HttpExchange` client → `ShikimoriMapper` → full `Anime` domain objects (primary source)
-- **Anilibria**: `@HttpExchange` client → external ID only
-- **AnimeGo**: Jsoup scraping → external ID only
-- **YummyAnime**: Jsoup + DLE session/cookie management via `YummyAnimeDleSessionManager` → external ID only
+- **Tavily**: `@HttpExchange` client → `TavilyWatchLinkResolver` → single watch URL
 
-New `@HttpExchange` clients must be registered in `HttpClientConfig` with a dedicated `RestClient` bean and `HttpServiceProxyFactory`. Scraping providers just use Jsoup directly with `NetworkProperties.getRandomAgent()`.
+`TavilyWatchLinkResolver` resolution order: (1) direct `kinopoisk.ru` link rewritten to `kinokino.win`, (2) `aniliberty.top` link, (3) general web search with the Russian title.
+
+New `@HttpExchange` clients must be registered in `HttpClientConfig` with a dedicated `RestClient` bean and `HttpServiceProxyFactory`.
 
 ### Domain Model Quirks
 
 - All entities are **Records** with `@Table`/`@MappedCollection` (Spring Data JDBC, not JPA)
-- `Anime` has `withId()`, `withDescription()`, `withLinks()` copy methods because Records are immutable
-- `AnimeSource` prefixes: `shikimori_`, `anilibria_`, `animego_`, `yummyanime_` — use `createPublicId()` / `extractIdFromPublicId()`
+- `Anime` has `withId()`, `withDescription()`, `withLinks()`, `withWatchUrl()` copy methods because Records are immutable
+- `AnimeSource` prefix: `shikimori_` — use `createPublicId()` / `extractIdFromPublicId()`
 - `WatchStatus` has transition logic: `onAllEpisodesWatched()`, `onRewatchStarted()`, `isTerminal()`
 
 ### HTTP Client Setup
@@ -110,13 +111,13 @@ New `@HttpExchange` clients must be registered in `HttpClientConfig` with a dedi
 - **No `catch (Exception)`** — catch specific types, return `Optional.empty()` on failures
 - **SLF4J with `LoggerFactory`** — no Lombok `@Slf4j`
 - **Async**: `CompletableFuture` with `@Qualifier("applicationTaskExecutor") TaskExecutor`
-- **Stream Gatherers**: `Gatherers.windowFixed(n)` for partitioning (e.g., status buttons in rows of 3, watch link buttons in rows of 2)
+- **Stream Gatherers**: `Gatherers.windowFixed(n)` for partitioning (e.g., status buttons in rows of 3)
 
 ## Testing
 
 - **JUnit 6 + AssertJ**, BDD style: `// Given` / `// When` / `// Then`
 - **Naming**: `should_[Expected]_when_[Condition]`
-- **Test profile**: `application-test.yaml` → H2 in-memory, cache disabled, dummy Telegram tokens
+- **Test profile**: `application-test.yaml` → H2 in-memory, cache disabled, dummy Telegram + Tavily tokens
 - **Schema**: `src/test/resources/schema.sql` auto-loaded — contains all 4 tables (`anime`, `anime_link`, `telegram_user`, `watchlist`). Update when adding new entities or columns.
 - Test JSON fixtures in `src/test/resources/json/shikimori/`
 
@@ -129,11 +130,12 @@ New `@HttpExchange` clients must be registered in `HttpClientConfig` with a dedi
 
 **App config keys (`app.*`):**
 - `app.anime-sources` — `Map<AnimeSource, String>` of provider base URLs
-- `app.watch-url-template` — redirect URL template (`%s` = source name, `%s` = publicId)
-- `app.network.provider-timeout-ms` — HTTP timeout for scraping (default 5000ms)
-- `app.network.user-agents` — UA rotation list for `NetworkProperties.getRandomAgent()`
 
-`TelegramBotProperties` uses `@Validated` + `@NotBlank` — missing token/username fails fast at startup.
+**Tavily config keys (`tavily.*`):**
+- `tavily.api-key` — Tavily API key (from `TAVILY_API_KEY`)
+- `tavily.base-url` — Tavily API base URL (default `https://api.tavily.com`)
+
+`TelegramBotProperties` and `TavilyProperties` use `@Validated` + `@NotBlank` — missing token/username/api-key fails fast at startup.
 
 ## Deployment
 

@@ -45,6 +45,7 @@ public class ShikimoriMapper {
                 dto.releasedOn(),
                 toLocalDateTime(dto.updatedAt()),
                 toLocalDateTime(dto.nextEpisodeAt()),
+                null,
                 Set.of(new AnimeLink(null, null, AnimeSource.SHIKIMORI, String.valueOf(dto.id())))
         );
     }

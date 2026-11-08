@@ -15,7 +15,7 @@ class AnimeTest {
     private Anime newAnime(Long id, String publicId, String name, Set<AnimeLink> links) {
         return new Anime(id, publicId, null, null, name, "Russian", null,
                 "desc", "poster.jpg", "tv", true, false, false, 12, 12,
-                LocalDate.now(), LocalDate.now(), LocalDateTime.now(), null, links);
+                LocalDate.now(), LocalDate.now(), LocalDateTime.now(), null, null, links);
     }
 
     @Nested
@@ -25,11 +25,11 @@ class AnimeTest {
         @Test
         void should_returnTrue_when_linkExistsForSource() {
             // Given
-            AnimeLink link = new AnimeLink(1L, 100L, AnimeSource.ANILIBRIA, "ext-1");
+            AnimeLink link = new AnimeLink(1L, 100L, AnimeSource.SHIKIMORI, "ext-1");
             Anime anime = newAnime(100L, "shikimori_100", "Test Anime", Set.of(link));
 
             // When
-            boolean result = anime.hasLinkForSource(AnimeSource.ANILIBRIA);
+            boolean result = anime.hasLinkForSource(AnimeSource.SHIKIMORI);
 
             // Then
             assertThat(result).isTrue();
@@ -41,7 +41,7 @@ class AnimeTest {
             Anime anime = newAnime(100L, "shikimori_100", "Test Anime", Set.of());
 
             // When
-            boolean result = anime.hasLinkForSource(AnimeSource.ANILIBRIA);
+            boolean result = anime.hasLinkForSource(AnimeSource.SHIKIMORI);
 
             // Then
             assertThat(result).isFalse();
@@ -53,20 +53,7 @@ class AnimeTest {
             Anime anime = newAnime(100L, "shikimori_100", "Test Anime", null);
 
             // When
-            boolean result = anime.hasLinkForSource(AnimeSource.ANILIBRIA);
-
-            // Then
-            assertThat(result).isFalse();
-        }
-
-        @Test
-        void should_returnFalse_when_differentSourceOnly() {
-            // Given
-            AnimeLink link = new AnimeLink(1L, 100L, AnimeSource.ANIMEGO, "ext-1");
-            Anime anime = newAnime(100L, "shikimori_100", "Test Anime", Set.of(link));
-
-            // When
-            boolean result = anime.hasLinkForSource(AnimeSource.ANILIBRIA);
+            boolean result = anime.hasLinkForSource(AnimeSource.SHIKIMORI);
 
             // Then
             assertThat(result).isFalse();
@@ -80,7 +67,7 @@ class AnimeTest {
         @Test
         void should_returnNewAnimeWithDifferentId() {
             // Given
-            AnimeLink link = new AnimeLink(1L, 100L, AnimeSource.ANILIBRIA, "ext-1");
+            AnimeLink link = new AnimeLink(1L, 100L, AnimeSource.SHIKIMORI, "ext-1");
             Anime anime = newAnime(100L, "shikimori_100", "Test Anime", Set.of(link));
 
             // When
@@ -93,7 +80,7 @@ class AnimeTest {
         @Test
         void should_preserveAllOtherFields() {
             // Given
-            AnimeLink link = new AnimeLink(1L, 100L, AnimeSource.ANILIBRIA, "ext-1");
+            AnimeLink link = new AnimeLink(1L, 100L, AnimeSource.SHIKIMORI, "ext-1");
             Anime anime = newAnime(100L, "shikimori_100", "Test Anime", Set.of(link));
 
             // When
@@ -135,7 +122,7 @@ class AnimeTest {
         @Test
         void should_preserveAllOtherFields() {
             // Given
-            AnimeLink link = new AnimeLink(1L, 100L, AnimeSource.ANILIBRIA, "ext-1");
+            AnimeLink link = new AnimeLink(1L, 100L, AnimeSource.SHIKIMORI, "ext-1");
             Anime anime = newAnime(100L, "shikimori_100", "Test Anime", Set.of(link));
 
             // When
@@ -166,7 +153,7 @@ class AnimeTest {
         void should_returnNewAnimeWithNewLinks() {
             // Given
             Anime anime = newAnime(100L, "shikimori_100", "Test Anime", Set.of());
-            AnimeLink newLink = new AnimeLink(2L, 100L, AnimeSource.ANIMEGO, "ext-2");
+            AnimeLink newLink = new AnimeLink(2L, 100L, AnimeSource.SHIKIMORI, "ext-2");
 
             // When
             Anime result = anime.withLinks(Set.of(newLink));
@@ -178,9 +165,9 @@ class AnimeTest {
         @Test
         void should_preserveAllOtherFields() {
             // Given
-            AnimeLink link = new AnimeLink(1L, 100L, AnimeSource.ANILIBRIA, "ext-1");
+            AnimeLink link = new AnimeLink(1L, 100L, AnimeSource.SHIKIMORI, "ext-1");
             Anime anime = newAnime(100L, "shikimori_100", "Test Anime", Set.of(link));
-            AnimeLink newLink = new AnimeLink(2L, 100L, AnimeSource.ANIMEGO, "ext-2");
+            AnimeLink newLink = new AnimeLink(2L, 100L, AnimeSource.SHIKIMORI, "ext-2");
 
             // When
             Anime result = anime.withLinks(Set.of(newLink));

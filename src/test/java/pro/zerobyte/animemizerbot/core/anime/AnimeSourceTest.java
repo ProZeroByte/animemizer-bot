@@ -25,42 +25,6 @@ class AnimeSourceTest {
             // Then
             assertThat(result).isEqualTo("shikimori_123");
         }
-
-        @Test
-        void should_returnPrefixedId_when_anilibria() {
-            // Given
-            AnimeSource source = AnimeSource.ANILIBRIA;
-
-            // When
-            String result = source.createPublicId(456);
-
-            // Then
-            assertThat(result).isEqualTo("anilibria_456");
-        }
-
-        @Test
-        void should_returnPrefixedId_when_animego() {
-            // Given
-            AnimeSource source = AnimeSource.ANIMEGO;
-
-            // When
-            String result = source.createPublicId(789);
-
-            // Then
-            assertThat(result).isEqualTo("animego_789");
-        }
-
-        @Test
-        void should_returnPrefixedId_when_yummyanime() {
-            // Given
-            AnimeSource source = AnimeSource.YUMMYANIME;
-
-            // When
-            String result = source.createPublicId(101);
-
-            // Then
-            assertThat(result).isEqualTo("yummyanime_101");
-        }
     }
 
     @Nested
@@ -109,8 +73,8 @@ class AnimeSourceTest {
         @Test
         void should_returnEmpty_when_nonNumericSuffix() {
             // Given
-            AnimeSource source = AnimeSource.ANIMEGO;
-            String publicId = "animego_abc";
+            AnimeSource source = AnimeSource.SHIKIMORI;
+            String publicId = "shikimori_abc";
 
             // When
             Optional<Long> result = source.extractIdFromPublicId(publicId);

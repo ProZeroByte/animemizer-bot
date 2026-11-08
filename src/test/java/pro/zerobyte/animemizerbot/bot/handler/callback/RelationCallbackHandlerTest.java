@@ -69,12 +69,12 @@ class RelationCallbackHandlerTest {
 
     private Anime buildAnime(Long id, String publicId, String prequelPublicId, String sequelPublicId) {
         return new Anime(id, publicId, prequelPublicId, sequelPublicId, "Test Anime", "Тест", null,
-                null, null, null, false, false, false, 12, null, null, null, null, null, null);
+                null, null, null, false, false, false, 12, null, null, null, null, null, null, null);
     }
 
     private Anime buildRelatedAnime(Long id, String publicId, String name) {
         return new Anime(id, publicId, null, null, name, name, null,
-                null, "http://poster.url", null, false, false, false, 12, null, null, null, null, null, null);
+                null, "http://poster.url", null, false, false, false, 12, null, null, null, null, null, null, null);
     }
 
     private Watchlist buildWatchlist(Long animeId, WatchStatus status, int lastWatchedEpisode) {

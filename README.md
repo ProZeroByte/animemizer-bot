@@ -75,16 +75,17 @@ When an anime is found, the bot displays an interactive card with these button g
 |----------|------|-------------------|
 | **Shikimori** | Primary source — search, details, relations | `@HttpExchange` REST client (JSON API) |
 | **Tavily** | Watch link resolution via web search | `@HttpExchange` REST client (JSON API) |
+| **OpenRouter** | Selects Tavily results that match the anime and Russian dubbing | `@HttpExchange` chat-completions client |
 
-**Shikimori** is the primary data source — all anime search and detail fetching goes through its API. **Tavily** is used to resolve a single watch link for each anime. Failed lookups are cached for 24 hours to avoid repeated searches.
+**Shikimori** is the primary data source — all anime search and detail fetching goes through its API. **Tavily** searches for candidate links and **OpenRouter** evaluates those candidates; generated URLs are never accepted. Failed lookups are cached for 24 hours to avoid repeated searches.
 
 ### Watch Link Resolution
 
 `TavilyWatchLinkResolver` resolves a single watch URL in this order:
 
-1. Search for a direct `kinopoisk.ru` link, then rewrite the domain to `kinokino.win`.
-2. If not found, search for a link on `aniliberty.top`.
-3. If still not found, run a general web search with the Russian title.
+1. Search for `kinopoisk.ru` candidates and ask OpenRouter to choose a matching Russian-dubbed watch link, then rewrite the selected domain to `kinokino.win`.
+2. If no suitable link is selected, repeat for `aniliberty.top`.
+3. If still not found, search the general web for the Russian title and Russian dubbing. If OpenRouter is unavailable or rejects its result, only return a Tavily result whose title or content indicates Russian dubbing; otherwise return no link.
 
 ## Architecture
 
@@ -251,7 +252,8 @@ animemizer-bot/
 │   │   └── props/
 │   │       ├── TelegramBotProperties       # Bot token, username, webhook config
 │   │       ├── AnimeUrlProperties          # Provider base URLs
-│   │       └── TavilyProperties            # Tavily API key + base URL
+│   │       ├── TavilyProperties            # Tavily API key + base URL
+│   │       └── OpenRouterProperties        # OpenRouter API key, base URL + model
 │   ├── core/
 │   │   ├── anime/
 │   │   │   ├── Anime                       # Domain entity (record + @Table)
@@ -279,10 +281,13 @@ animemizer-bot/
 │   │   │   ├── ShikimoriConnector          # Async fetch + caching
 │   │   │   ├── ShikimoriMapper             # DTO → domain mapping
 │   │   │   └── dto/                        # ShikimoriAnimeDto, ShikimoriAnimeRelatedDto
-│   │   └── tavily/
+│   │   ├── tavily/
 │   │       ├── TavilyClient                # @HttpExchange REST client
-│   │       ├── TavilyWatchLinkResolver     # WatchLinkResolver impl (3-step search)
+│   │       ├── TavilyWatchLinkResolver     # WatchLinkResolver with AI-assisted selection
 │   │       └── dto/                        # TavilySearchRequest, TavilySearchResponse
+│   │   └── openrouter/
+│   │       ├── OpenRouterClient            # @HttpExchange chat-completions client
+│   │       └── dto/                        # Chat completion request/response
 │   └── exception/
 │       ├── GlobalExceptionHandler          # @RestControllerAdvice
 │       ├── JsonDeserializationException
@@ -343,6 +348,7 @@ Configuration is split across three files:
 | `DATASOURCE_USERNAME` | Database username | `<DATABASE_USERNAME>` |
 | `DATASOURCE_PASSWORD` | Database password | `<DATABASE_PASSWORD>` |
 | `TAVILY_API_KEY` | Tavily API key for watch link search | `<TAVILY_API_KEY>` |
+| `OPENROUTER_API_KEY` | OpenRouter API key for evaluating Tavily results | `<OPENROUTER_API_KEY>` |
 
 ### Required for Production (`prod` profile)
 
@@ -355,6 +361,7 @@ Configuration is split across three files:
 
 - `TelegramBotProperties` uses `@Validated` + `@NotBlank` on `token` and `username` — the application will **fail to start** if these are missing.
 - `TavilyProperties` uses `@Validated` + `@NotBlank` on `apiKey` — the application will **fail to start** if `TAVILY_API_KEY` is missing.
+- `OpenRouterProperties` uses `@Validated` + `@NotBlank` on `apiKey` — the application will **fail to start** if `OPENROUTER_API_KEY` is missing. The model defaults to `openai/gpt-4o-mini` and can be changed with `openrouter.model`.
 - Tests use dummy values from `application-test.yaml` — no environment variables are needed to run `mvn test`.
 - The `secretToken` field in `TelegramBotProperties` is optional (no `@NotBlank`).
 
@@ -379,6 +386,7 @@ export DATASOURCE_URL=jdbc:postgresql://localhost:5432/animemizer
 export DATASOURCE_USERNAME=<db-username>
 export DATASOURCE_PASSWORD=<db-password>
 export TAVILY_API_KEY=<your-tavily-api-key>
+export OPENROUTER_API_KEY=<your-openrouter-api-key>
 ```
 
 ### 3. Run with Maven Wrapper

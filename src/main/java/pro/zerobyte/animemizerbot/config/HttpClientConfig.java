@@ -11,8 +11,10 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.support.RestClientAdapter;
 import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 import pro.zerobyte.animemizerbot.config.props.AnimeUrlProperties;
+import pro.zerobyte.animemizerbot.config.props.OpenRouterProperties;
 import pro.zerobyte.animemizerbot.config.props.TavilyProperties;
 import pro.zerobyte.animemizerbot.core.anime.AnimeSource;
+import pro.zerobyte.animemizerbot.integration.openrouter.OpenRouterClient;
 import pro.zerobyte.animemizerbot.integration.shikimori.ShikimoriClient;
 import pro.zerobyte.animemizerbot.integration.tavily.TavilyClient;
 
@@ -74,5 +76,27 @@ public class HttpClientConfig {
                 .builderFor(RestClientAdapter.create(tavilyRestClient))
                 .build()
                 .createClient(TavilyClient.class);
+    }
+
+    @Bean
+    public RestClient openRouterRestClient(OpenRouterProperties properties) {
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(5))
+                .build();
+        return RestClient.builder()
+                .baseUrl(properties.resolvedBaseUrl())
+                .requestFactory(new JdkClientHttpRequestFactory(httpClient))
+                .defaultHeader(USER_AGENT, "Animemizer-bot")
+                .defaultHeader(ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+                .defaultHeader("Authorization", "Bearer " + properties.apiKey())
+                .build();
+    }
+
+    @Bean
+    public OpenRouterClient openRouterClient(RestClient openRouterRestClient) {
+        return HttpServiceProxyFactory
+                .builderFor(RestClientAdapter.create(openRouterRestClient))
+                .build()
+                .createClient(OpenRouterClient.class);
     }
 }

@@ -10,6 +10,6 @@ RUN apk add --no-cache tzdata && \
 RUN addgroup -S botgroup && adduser -S botuser -G botgroup
 USER botuser
 
-COPY *-SNAPSHOT.jar app.jar
+COPY animemizer-bot-*.jar app.jar
 
 ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -40,3 +40,8 @@ app:
 tavily:
   api-key: ${TAVILY_API_KEY}
   base-url: https://api.tavily.com
+
+openrouter:
+  api-key: ${OPENROUTER_API_KEY}
+  base-url: https://openrouter.ai/api/v1
+  model: openai/gpt-4o-mini

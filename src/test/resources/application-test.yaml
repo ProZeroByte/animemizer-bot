@@ -21,3 +21,8 @@ telegram:
 tavily:
   api-key: "dummy-test-tavily-key"
   base-url: https://api.tavily.com
+
+openrouter:
+  api-key: "dummy-test-openrouter-key"
+  base-url: https://openrouter.ai/api/v1
+  model: openai/gpt-4o-mini

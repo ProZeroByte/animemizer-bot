@@ -10,6 +10,9 @@ public record TavilySearchRequest(
         String query,
         String searchDepth,
         Integer maxResults,
-        List<String> includeDomains
+        List<String> includeDomains,
+        String includeDomainsMode,
+        String country,
+        String language
 ) {
 }

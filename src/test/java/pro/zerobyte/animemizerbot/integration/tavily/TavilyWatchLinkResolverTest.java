@@ -89,6 +89,53 @@ class TavilyWatchLinkResolverTest {
         }
 
         @Test
+        void should_ignoreKinopoiskNonTitlePages_when_onlyMediaArticlesReturned() {
+            // Given
+            Anime anime = newAnime("Steins;Gate", "Врата Штейна");
+            when(tavilyClient.search(any(TavilySearchRequest.class)))
+                    .thenReturn(responseWith("https://www.kinopoisk.ru/media/article/4010659",
+                            "https://www.kinopoisk.ru/lists/m_act[keyword]/728434"))
+                    .thenReturn(responseWith())
+                    .thenReturn(responseWith("https://example.com/watch/steins-gate"));
+            when(openRouterClient.complete(any(ChatCompletionRequest.class)))
+                    .thenReturn(selection("https://example.com/watch/steins-gate"));
+
+            // When
+            Optional<String> result = resolver.resolveWatchUrl(anime);
+
+            // Then
+            assertThat(result).contains("https://example.com/watch/steins-gate");
+            ArgumentCaptor<ChatCompletionRequest> captor = ArgumentCaptor.forClass(ChatCompletionRequest.class);
+            verify(openRouterClient).complete(captor.capture());
+            assertThat(captor.getValue().messages().getLast().content())
+                    .doesNotContain("kinopoisk.ru/media", "kinopoisk.ru/lists");
+        }
+
+        @Test
+        void should_useProviderPrompt_when_selectingKinopoiskTitlePage() {
+            // Given
+            Anime anime = newAnime("Darker than Black", "Темнее чёрного");
+            when(tavilyClient.search(any(TavilySearchRequest.class)))
+                    .thenReturn(responseWith("https://www.kinopoisk.ru/series/647199",
+                            "https://www.kinopoisk.ru/series/408714/reviews"));
+            when(openRouterClient.complete(any(ChatCompletionRequest.class)))
+                    .thenReturn(selection("https://www.kinopoisk.ru/series/647199"));
+
+            // When
+            Optional<String> result = resolver.resolveWatchUrl(anime);
+
+            // Then
+            assertThat(result).contains("https://www.kinokino.win/series/647199");
+            ArgumentCaptor<ChatCompletionRequest> captor = ArgumentCaptor.forClass(ChatCompletionRequest.class);
+            verify(openRouterClient).complete(captor.capture());
+            String systemPrompt = captor.getValue().messages().getFirst().content();
+            assertThat(systemPrompt).contains("main title page");
+            assertThat(systemPrompt).doesNotContain("Russian voice-over");
+            assertThat(captor.getValue().messages().getLast().content())
+                    .doesNotContain("kinopoisk.ru/series/408714/reviews");
+        }
+
+        @Test
         void should_fallBackToAniliberty_when_kinopoiskHasNoCandidates() {
             // Given
             Anime anime = newAnime("Steins;Gate", "Врата Штейна");
@@ -123,7 +170,12 @@ class TavilyWatchLinkResolverTest {
             assertThat(result).contains("https://example.com/watch/steins-gate");
             ArgumentCaptor<TavilySearchRequest> captor = ArgumentCaptor.forClass(TavilySearchRequest.class);
             verify(tavilyClient, org.mockito.Mockito.times(3)).search(captor.capture());
-            assertThat(captor.getAllValues().getLast().query()).contains("русская озвучка", "русский дубляж");
+            TavilySearchRequest generalRequest = captor.getAllValues().getLast();
+            assertThat(generalRequest.query()).contains("русская озвучка", "русский дубляж");
+            assertThat(generalRequest.country()).isEqualTo("russia");
+            assertThat(generalRequest.language()).isEqualTo("ru");
+            assertThat(generalRequest.includeDomainsMode()).isEqualTo("prefer");
+            assertThat(generalRequest.includeDomains()).contains("yummyanime.tv", "aniliberty.top");
         }
 
         @Test

@@ -83,9 +83,9 @@ When an anime is found, the bot displays an interactive card with these button g
 
 `TavilyWatchLinkResolver` resolves a single watch URL in this order:
 
-1. Search for `kinopoisk.ru` candidates and ask OpenRouter to choose a matching Russian-dubbed watch link, then rewrite the selected domain to `kinokino.win`.
+1. Search for `kinopoisk.ru` title pages (media articles and keyword lists are ignored) and ask OpenRouter to choose a matching Russian-dubbed watch link, then rewrite the selected domain to `kinokino.win`.
 2. If no suitable link is selected, repeat for `aniliberty.top`.
-3. If still not found, search the general web for the Russian title and Russian dubbing. If OpenRouter is unavailable or rejects its result, only return a Tavily result whose title or content indicates Russian dubbing; otherwise return no link.
+3. If still not found, search the general web for the Russian title and Russian dubbing, boosting results towards Russian anime sites (`include_domains_mode: prefer`), the Russian language and Russia. If OpenRouter is unavailable or rejects its result, only return a Tavily result whose title or content indicates Russian dubbing; otherwise return no link.
 
 ## Architecture
 

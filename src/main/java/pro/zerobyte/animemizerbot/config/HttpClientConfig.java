@@ -67,6 +67,13 @@ public class HttpClientConfig {
                 .defaultHeader(USER_AGENT, "Animemizer-bot")
                 .defaultHeader(ACCEPT, MediaType.APPLICATION_JSON_VALUE)
                 .defaultHeader("Authorization", "Bearer " + properties.apiKey())
+                .requestInterceptor((request, body, execution) -> {
+                    ClientHttpResponse response = execution.execute(request, body);
+                    if (!response.getStatusCode().is2xxSuccessful()) {
+                        log.warn("Tavily request {} failed with status: {}", request.getURI(), response.getStatusCode());
+                    }
+                    return response;
+                })
                 .build();
     }
 
@@ -89,6 +96,13 @@ public class HttpClientConfig {
                 .defaultHeader(USER_AGENT, "Animemizer-bot")
                 .defaultHeader(ACCEPT, MediaType.APPLICATION_JSON_VALUE)
                 .defaultHeader("Authorization", "Bearer " + properties.apiKey())
+                .requestInterceptor((request, body, execution) -> {
+                    ClientHttpResponse response = execution.execute(request, body);
+                    if (!response.getStatusCode().is2xxSuccessful()) {
+                        log.warn("OpenRouter request {} failed with status: {}", request.getURI(), response.getStatusCode());
+                    }
+                    return response;
+                })
                 .build();
     }
 

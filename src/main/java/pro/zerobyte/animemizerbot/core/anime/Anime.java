@@ -1,13 +1,11 @@
 package pro.zerobyte.animemizerbot.core.anime;
 
 import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.MappedCollection;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
-import java.util.Set;
 
 @Table("anime")
 public record Anime(
@@ -30,13 +28,8 @@ public record Anime(
         LocalDate releasedOn,
         LocalDateTime updatedAt,
         LocalDateTime nextEpisodeAt,
-        String watchUrl,
-        @MappedCollection(idColumn = "anime_id") Set<AnimeLink> links
+        String watchUrl
 ) {
-    public boolean hasLinkForSource(AnimeSource source) {
-        return links != null && links.stream().anyMatch(link -> link.source() == source);
-    }
-
     /**
      * Computes the released status based on airing state and episode counts.
      * An anime is considered released if it's not ongoing or if all episodes have aired.
@@ -48,24 +41,18 @@ public record Anime(
     public Anime withId(Long newId) {
         return new Anime(newId, publicId, prequelPublicId, sequelPublicId, name, russianName,
                 englishName, description, posterUrl, kind, isReleased, isAnons, isOngoing,
-                episodes, episodesAired, airedOn, releasedOn, updatedAt, nextEpisodeAt, watchUrl, links);
+                episodes, episodesAired, airedOn, releasedOn, updatedAt, nextEpisodeAt, watchUrl);
     }
 
     public Anime withDescription(String newDescription) {
         return new Anime(id, publicId, prequelPublicId, sequelPublicId, name, russianName,
                 englishName, newDescription, posterUrl, kind, isReleased, isAnons, isOngoing,
-                episodes, episodesAired, airedOn, releasedOn, updatedAt, nextEpisodeAt, watchUrl, links);
-    }
-
-    public Anime withLinks(Set<AnimeLink> newLinks) {
-        return new Anime(id, publicId, prequelPublicId, sequelPublicId, name, russianName,
-                englishName, description, posterUrl, kind, isReleased, isAnons, isOngoing,
-                episodes, episodesAired, airedOn, releasedOn, updatedAt, nextEpisodeAt, watchUrl, newLinks);
+                episodes, episodesAired, airedOn, releasedOn, updatedAt, nextEpisodeAt, watchUrl);
     }
 
     public Anime withWatchUrl(String newWatchUrl) {
         return new Anime(id, publicId, prequelPublicId, sequelPublicId, name, russianName,
                 englishName, description, posterUrl, kind, isReleased, isAnons, isOngoing,
-                episodes, episodesAired, airedOn, releasedOn, updatedAt, nextEpisodeAt, newWatchUrl, links);
+                episodes, episodesAired, airedOn, releasedOn, updatedAt, nextEpisodeAt, newWatchUrl);
     }
 }

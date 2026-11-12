@@ -26,7 +26,7 @@ A Telegram bot for anime discovery and watchlist tracking. Search for anime by t
 
 ## Overview
 
-Animemizer Bot is a Spring Boot application that integrates with Shikimori for anime data and Tavily for web search, providing a unified anime search and tracking experience through Telegram. Users can search for anime, track episode progress with inline keyboard buttons, set watch statuses, navigate prequel/sequel chains, batch-search multiple titles, and get a direct watch link for each anime.
+Animemizer Bot is a Spring Boot application that integrates with Shikimori for anime data and Kinopoisk API Unofficial, AniLiberty, and OpenRouter to resolve watch links, providing a unified anime search and tracking experience through Telegram. Users can search for anime, track episode progress with inline keyboard buttons, set watch statuses, navigate prequel/sequel chains, batch-search multiple titles, and get a direct watch link for each anime.
 
 The bot operates in two modes: **long polling** (development) and **webhook** (production), selected via Spring profiles.
 
@@ -38,7 +38,7 @@ The bot operates in two modes: **long polling** (development) and **webhook** (p
 - **Watch Status Management** — set status to Watching, Planned, Completed, Rewatching, On Hold, or Dropped via inline buttons
 - **Prequel/Sequel Navigation** — navigate anime franchise chains with directional buttons
 - **Watchlist** — view all tracked anime in a paginated list sorted alphabetically
-- **Watch Link** — a single "Смотреть" button with a direct watch link resolved via Tavily web search
+- **Watch Link** — a single "Смотреть" button shown when a link is found via Kinopoisk or AniLiberty
 - **Watch Link Enrichment** — anime records are automatically enriched with a watch link on first access
 - **Placeholder-then-Replace** — slow operations (search, list) show an immediate loading indicator, then replace it with the actual result
 
@@ -67,25 +67,26 @@ When an anime is found, the bot displays an interactive card with these button g
 | `⬅️ Предыстория` | Load the prequel anime (if available) |
 | `Продолжение ➡️` | Load the sequel anime (if available) |
 | `👀` / `📋` / `✅` / `🔄` / `⏸` / `❌` | Set watch status (Watching / Planned / Completed / Rewatching / On Hold / Dropped) |
-| `▶️ Смотреть` | Direct watch link (shown only when a link was resolved) |
+| `Смотреть` | Direct watch link (shown only when a link was resolved) |
 
 ## Supported Anime Providers
 
 | Provider | Role | Integration Method |
 |----------|------|-------------------|
 | **Shikimori** | Primary source — search, details, relations | `@HttpExchange` REST client (JSON API) |
-| **Tavily** | Watch link resolution via web search | `@HttpExchange` REST client (JSON API) |
-| **OpenRouter** | Selects Tavily results that match the anime and Russian dubbing | `@HttpExchange` chat-completions client |
+| **Kinopoisk API Unofficial** | Searches for matching Kinopoisk films and series | `@HttpExchange` REST client |
+| **AniLiberty** | Fallback anime release search | `@HttpExchange` REST client |
+| **OpenRouter** | Selects the best matching Kinopoisk/AniLiberty result | `@HttpExchange` chat-completions client |
 
-**Shikimori** is the primary data source — all anime search and detail fetching goes through its API. **Tavily** searches for candidate links and **OpenRouter** evaluates those candidates; generated URLs are never accepted. Failed lookups are cached for 24 hours to avoid repeated searches.
+**Shikimori** is the primary data source — all anime search and detail fetching goes through its API. Watch-link lookup searches Kinopoisk first, then AniLiberty; **OpenRouter** selects only from returned candidates, and generated URLs are never accepted. AniLiberty results include the anime's Shikimori ID as a matching signal. Failed lookups are cached for 24 hours to avoid repeated searches.
 
 ### Watch Link Resolution
 
-`TavilyWatchLinkResolver` resolves a single watch URL in this order:
+`KinopoiskWatchLinkResolver` resolves a single watch URL in this order:
 
-1. Search for `kinopoisk.ru` title pages (media articles and keyword lists are ignored) and ask OpenRouter to choose a matching Russian-dubbed watch link, then rewrite the selected domain to `kinokino.win`.
-2. If no suitable link is selected, repeat for `aniliberty.top`.
-3. If still not found, search the general web for the Russian title and Russian dubbing, boosting results towards Russian anime sites (`include_domains_mode: prefer`), the Russian language and Russia. If OpenRouter is unavailable or rejects its result, only return a Tavily result whose title or content indicates Russian dubbing; otherwise return no link.
+1. Search Kinopoisk API Unofficial by the Russian anime title and ask OpenRouter to select the matching film or series. For a numbered later season, if selection fails, also search by the base title and accept a uniquely matching series or first season. Season availability in its player is not verified. Build the Kinopoisk URL and replace `kinopoisk.ru` with `kinokino.red`.
+2. If no suitable Kinopoisk result is selected, search AniLiberty releases. OpenRouter selects a candidate using its title, year, and Shikimori ID; construct the link from its `alias` as `https://www.aniliberty.top/anime/releases/release/{alias}/episodes`.
+3. If neither source yields a valid candidate, no watch button is shown.
 
 ## Architecture
 
@@ -129,7 +130,7 @@ For slow operations (search, list, batch, prequel/sequel navigation):
 
 ### Watch Link Enrichment
 
-`AnimeService.enrichAndSaveIfRequired()` is called on every anime fetch. It resolves a watch link via `WatchLinkResolver` (Tavily) when the anime has none, and persists the result. Failed lookups are cached in the `providerFailures` Caffeine cache for 24 hours.
+`AnimeService.enrichAndSaveIfRequired()` is called on every anime fetch. It resolves a watch link via `WatchLinkResolver` (Kinopoisk, then AniLiberty) when the anime has none, and persists the result. Failed lookups are cached in the `providerFailures` Caffeine cache for 24 hours.
 
 ### Architecture Diagrams
 
@@ -151,7 +152,9 @@ graph TB
     AS --> WR[WatchLinkResolver]
     AS --> DB[(PostgreSQL)]
     SC -->|REST| Shiki[Shikimori API]
-    WR -->|REST| Tav[Tavily API]
+    WR -->|REST| KP[Kinopoisk API Unofficial]
+    WR -->|REST| AL[AniLiberty API]
+    WR -->|REST| OR[OpenRouter]
     Bot -->|Response| TG
 ```
 
@@ -192,7 +195,9 @@ graph LR
     RP -->|HTTP| BOT[animemizer-bot<br/>Jetty :8080]
     BOT -->|JDBC| PG[(PostgreSQL)]
     BOT -->|REST| SH[Shikimori]
-    BOT -->|REST| TV[Tavily]
+    BOT -->|REST| KP[Kinopoisk API Unofficial]
+    BOT -->|REST| AL[AniLiberty]
+    BOT -->|REST| OR[OpenRouter]
 
     subgraph Docker
         BOT
@@ -251,13 +256,13 @@ animemizer-bot/
 │   │   ├── PropertiesConfig                # @EnableConfigurationProperties
 │   │   └── props/
 │   │       ├── TelegramBotProperties       # Bot token, username, webhook config
-│   │       ├── AnimeUrlProperties          # Provider base URLs
-│   │       ├── TavilyProperties            # Tavily API key + base URL
+│   │       ├── ShikimoriProperties          # Shikimori API + poster base URL
+│   │       ├── KinopoiskProperties         # Kinopoisk API key + base URL
+│   │       ├── AnilibertyProperties        # AniLiberty base URL
 │   │       └── OpenRouterProperties        # OpenRouter API key, base URL + model
 │   ├── core/
 │   │   ├── anime/
 │   │   │   ├── Anime                       # Domain entity (record + @Table)
-│   │   │   ├── AnimeLink                   # External link entity (@MappedCollection)
 │   │   │   ├── AnimeSource                 # Enum: SHIKIMORI
 │   │   │   ├── WatchLinkResolver           # Interface for watch link resolution
 │   │   │   ├── AnimeRepository             # Spring Data JDBC repository
@@ -281,10 +286,13 @@ animemizer-bot/
 │   │   │   ├── ShikimoriConnector          # Async fetch + caching
 │   │   │   ├── ShikimoriMapper             # DTO → domain mapping
 │   │   │   └── dto/                        # ShikimoriAnimeDto, ShikimoriAnimeRelatedDto
-│   │   ├── tavily/
-│   │       ├── TavilyClient                # @HttpExchange REST client
-│   │       ├── TavilyWatchLinkResolver     # WatchLinkResolver with AI-assisted selection
-│   │       └── dto/                        # TavilySearchRequest, TavilySearchResponse
+│   │   ├── kinopoisk/
+│   │   │   ├── KinopoiskClient             # @HttpExchange REST client
+│   │   │   ├── KinopoiskWatchLinkResolver  # Kinopoisk → AniLiberty resolution
+│   │   │   └── dto/
+│   │   ├── aniliberty/
+│   │   │   ├── AnilibertyClient            # @HttpExchange REST client
+│   │   │   └── dto/
 │   │   └── openrouter/
 │   │       ├── OpenRouterClient            # @HttpExchange chat-completions client
 │   │       └── dto/                        # Chat completion request/response
@@ -300,7 +308,7 @@ animemizer-bot/
 │   ├── java/pro/zerobyte/animemizerbot/    # Unit + integration tests
 │   └── resources/
 │       ├── application-test.yaml           # H2, disabled cache, dummy tokens
-│       ├── schema.sql                      # Test DB schema (4 tables)
+│       ├── schema.sql                      # Test DB schema (3 tables)
 │       └── json/shikimori/                 # JSON fixtures
 ├── Dockerfile
 ├── docker-compose.yml
@@ -331,9 +339,11 @@ animemizer-bot/
 
 Configuration is split across three files:
 
-- `application.yaml` — shared settings (database, Telegram tokens, provider URLs, Tavily, cache)
+- `application.yaml` — shared settings (database, Telegram tokens, provider URLs, cache)
 - `application-dev.yaml` — dev-specific (DEBUG logging for app + Telegram)
 - `application-prod.yaml` — prod-specific (webhook path + base URL, INFO logging)
+
+Shikimori's API and poster host are configured with `shikimori.base-url` (default: `https://shikimori.io`). If you previously overrode `app.anime-sources.SHIKIMORI`, move that override to `shikimori.base-url`.
 
 ## Environment Variables
 
@@ -347,8 +357,8 @@ Configuration is split across three files:
 | `DATASOURCE_URL` | PostgreSQL JDBC URL | `jdbc:postgresql://localhost:5432/animemizer` |
 | `DATASOURCE_USERNAME` | Database username | `<DATABASE_USERNAME>` |
 | `DATASOURCE_PASSWORD` | Database password | `<DATABASE_PASSWORD>` |
-| `TAVILY_API_KEY` | Tavily API key for watch link search | `<TAVILY_API_KEY>` |
-| `OPENROUTER_API_KEY` | OpenRouter API key for evaluating Tavily results | `<OPENROUTER_API_KEY>` |
+| `KINOPOISK_API_KEY` | Kinopoisk API Unofficial key | `<KINOPOISK_API_KEY>` |
+| `OPENROUTER_API_KEY` | OpenRouter API key for selecting search results | `<OPENROUTER_API_KEY>` |
 
 ### Required for Production (`prod` profile)
 
@@ -360,7 +370,7 @@ Configuration is split across three files:
 ### Notes
 
 - `TelegramBotProperties` uses `@Validated` + `@NotBlank` on `token` and `username` — the application will **fail to start** if these are missing.
-- `TavilyProperties` uses `@Validated` + `@NotBlank` on `apiKey` — the application will **fail to start** if `TAVILY_API_KEY` is missing.
+- `KinopoiskProperties` uses `@Validated` + `@NotBlank` on `apiKey` — the application will **fail to start** if `KINOPOISK_API_KEY` is missing.
 - `OpenRouterProperties` uses `@Validated` + `@NotBlank` on `apiKey` — the application will **fail to start** if `OPENROUTER_API_KEY` is missing. The model defaults to `openai/gpt-4o-mini` and can be changed with `openrouter.model`.
 - Tests use dummy values from `application-test.yaml` — no environment variables are needed to run `mvn test`.
 - The `secretToken` field in `TelegramBotProperties` is optional (no `@NotBlank`).
@@ -385,7 +395,7 @@ export TELEGRAM_BOT_API_SECRET_TOKEN=<your-secret-token>
 export DATASOURCE_URL=jdbc:postgresql://localhost:5432/animemizer
 export DATASOURCE_USERNAME=<db-username>
 export DATASOURCE_PASSWORD=<db-password>
-export TAVILY_API_KEY=<your-tavily-api-key>
+export KINOPOISK_API_KEY=<your-kinopoisk-api-key>
 export OPENROUTER_API_KEY=<your-openrouter-api-key>
 ```
 
@@ -427,7 +437,9 @@ To run a specific test class:
 - **Naming convention**: `should_[Expected]_when_[Condition]`
 - **H2** in-memory database for repository/service tests
 - **JSON fixtures** in `src/test/resources/json/shikimori/`
-- **Test schema**: `src/test/resources/schema.sql` (anime, anime_link, telegram_user, watchlist tables)
+- **Test schema**: `src/test/resources/schema.sql` (anime, telegram_user, watchlist tables)
+
+Existing PostgreSQL databases may still contain the unused `anime_link` table. Back up the database before removing it manually with `DROP TABLE IF EXISTS anime_link;`; the application does not modify existing schemas automatically.
 
 ### Test Coverage Areas
 
@@ -437,7 +449,7 @@ The test suite covers:
 - Handler logic (Start, Help, Stop, Search, Episode, Relation, WatchStatus, Callback parsing)
 - Service layer (AnimeService, WatchlistService, TelegramUserService, ShikimoriConnector)
 - Update routing (`BotUpdateProcessorTest`)
-- Tavily watch link resolution (`TavilyWatchLinkResolverTest`)
+- Kinopoisk/AniLiberty watch link resolution (`KinopoiskWatchLinkResolverTest`)
 - Message building (`AnimeMessageBuilderTest`, `TelegramMessageUtilsTest`)
 
 ## Building the Application

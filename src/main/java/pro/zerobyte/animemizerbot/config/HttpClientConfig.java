@@ -10,13 +10,14 @@ import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.support.RestClientAdapter;
 import org.springframework.web.service.invoker.HttpServiceProxyFactory;
-import pro.zerobyte.animemizerbot.config.props.AnimeUrlProperties;
+import pro.zerobyte.animemizerbot.config.props.AnilibertyProperties;
+import pro.zerobyte.animemizerbot.config.props.KinopoiskProperties;
 import pro.zerobyte.animemizerbot.config.props.OpenRouterProperties;
-import pro.zerobyte.animemizerbot.config.props.TavilyProperties;
-import pro.zerobyte.animemizerbot.core.anime.AnimeSource;
+import pro.zerobyte.animemizerbot.config.props.ShikimoriProperties;
+import pro.zerobyte.animemizerbot.integration.aniliberty.AnilibertyClient;
+import pro.zerobyte.animemizerbot.integration.kinopoisk.KinopoiskClient;
 import pro.zerobyte.animemizerbot.integration.openrouter.OpenRouterClient;
 import pro.zerobyte.animemizerbot.integration.shikimori.ShikimoriClient;
-import pro.zerobyte.animemizerbot.integration.tavily.TavilyClient;
 
 import java.net.http.HttpClient;
 import java.time.Duration;
@@ -29,12 +30,12 @@ public class HttpClientConfig {
     private static final Logger log = LoggerFactory.getLogger(HttpClientConfig.class);
 
     @Bean
-    public RestClient shikimoriRestClient(AnimeUrlProperties properties) {
+    public RestClient shikimoriRestClient(ShikimoriProperties properties) {
         HttpClient httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(5))
                 .build();
         return RestClient.builder()
-                .baseUrl(properties.getUrlFor(AnimeSource.SHIKIMORI))
+                .baseUrl(properties.resolvedBaseUrl())
                 .requestFactory(new JdkClientHttpRequestFactory(httpClient))
                 .defaultHeader(USER_AGENT, "Animemizer-bot")
                 .defaultHeader(ACCEPT, MediaType.APPLICATION_JSON_VALUE)
@@ -57,7 +58,7 @@ public class HttpClientConfig {
     }
 
     @Bean
-    public RestClient tavilyRestClient(TavilyProperties properties) {
+    public RestClient kinopoiskRestClient(KinopoiskProperties properties) {
         HttpClient httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(5))
                 .build();
@@ -66,11 +67,11 @@ public class HttpClientConfig {
                 .requestFactory(new JdkClientHttpRequestFactory(httpClient))
                 .defaultHeader(USER_AGENT, "Animemizer-bot")
                 .defaultHeader(ACCEPT, MediaType.APPLICATION_JSON_VALUE)
-                .defaultHeader("Authorization", "Bearer " + properties.apiKey())
+                .defaultHeader("X-API-KEY", properties.apiKey())
                 .requestInterceptor((request, body, execution) -> {
                     ClientHttpResponse response = execution.execute(request, body);
                     if (!response.getStatusCode().is2xxSuccessful()) {
-                        log.warn("Tavily request {} failed with status: {}", request.getURI(), response.getStatusCode());
+                        log.warn("Kinopoisk request {} failed with status: {}", request.getURI(), response.getStatusCode());
                     }
                     return response;
                 })
@@ -78,11 +79,39 @@ public class HttpClientConfig {
     }
 
     @Bean
-    public TavilyClient tavilyClient(RestClient tavilyRestClient) {
+    public KinopoiskClient kinopoiskClient(RestClient kinopoiskRestClient) {
         return HttpServiceProxyFactory
-                .builderFor(RestClientAdapter.create(tavilyRestClient))
+                .builderFor(RestClientAdapter.create(kinopoiskRestClient))
                 .build()
-                .createClient(TavilyClient.class);
+                .createClient(KinopoiskClient.class);
+    }
+
+    @Bean
+    public RestClient anilibertyRestClient(AnilibertyProperties properties) {
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(5))
+                .build();
+        return RestClient.builder()
+                .baseUrl(properties.resolvedBaseUrl())
+                .requestFactory(new JdkClientHttpRequestFactory(httpClient))
+                .defaultHeader(USER_AGENT, "Animemizer-bot")
+                .defaultHeader(ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+                .requestInterceptor((request, body, execution) -> {
+                    ClientHttpResponse response = execution.execute(request, body);
+                    if (!response.getStatusCode().is2xxSuccessful()) {
+                        log.warn("AniLiberty request {} failed with status: {}", request.getURI(), response.getStatusCode());
+                    }
+                    return response;
+                })
+                .build();
+    }
+
+    @Bean
+    public AnilibertyClient anilibertyClient(RestClient anilibertyRestClient) {
+        return HttpServiceProxyFactory
+                .builderFor(RestClientAdapter.create(anilibertyRestClient))
+                .build()
+                .createClient(AnilibertyClient.class);
     }
 
     @Bean

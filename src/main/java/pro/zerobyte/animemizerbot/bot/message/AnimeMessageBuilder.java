@@ -163,7 +163,7 @@ public class AnimeMessageBuilder {
         }
 
         return new InlineKeyboardRow(InlineKeyboardButton.builder()
-                .text("▶️ Смотреть")
+                .text("Смотреть")
                 .url(anime.watchUrl())
                 .build());
     }

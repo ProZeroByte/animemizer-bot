@@ -6,9 +6,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
 import pro.zerobyte.animemizerbot.config.JacksonConfig;
-import pro.zerobyte.animemizerbot.config.props.AnimeUrlProperties;
+import pro.zerobyte.animemizerbot.config.props.ShikimoriProperties;
 import pro.zerobyte.animemizerbot.core.anime.Anime;
-import pro.zerobyte.animemizerbot.core.anime.AnimeSource;
 import pro.zerobyte.animemizerbot.integration.shikimori.dto.ShikimoriAnimeDto;
 import pro.zerobyte.animemizerbot.integration.shikimori.dto.ShikimoriAnimeRelatedDto;
 import tools.jackson.databind.ObjectMapper;
@@ -17,7 +16,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -30,10 +28,7 @@ class ShikimoriMapperTest {
 
     @BeforeEach
     void setUp() {
-        AnimeUrlProperties urlProperties = new AnimeUrlProperties(
-                Map.of(AnimeSource.SHIKIMORI, SHIKIMORI_BASE_URL)
-        );
-        mapper = new ShikimoriMapper(urlProperties);
+        mapper = new ShikimoriMapper(new ShikimoriProperties(SHIKIMORI_BASE_URL));
         JacksonConfig config = new JacksonConfig();
         objectMapper = config.jsonMapper();
     }
@@ -74,8 +69,7 @@ class ShikimoriMapperTest {
             assertThat(anime.episodes()).isEqualTo(11);
             assertThat(anime.episodesAired()).isEqualTo(10);
             assertThat(anime.kind()).isEqualTo("tv");
-            assertThat(anime.links()).isNotNull();
-            assertThat(anime.links()).hasSize(1);
+            assertThat(anime.watchUrl()).isNull();
         }
 
         @Test

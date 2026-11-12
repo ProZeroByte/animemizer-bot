@@ -6,7 +6,7 @@ applyTo: 'src/**'
 
 ## Project Context
 
-This is a **Telegram bot** (Animemizer Bot) that helps users discover anime by integrating with Shikimori (anime data) and Tavily (watch link search). Built with **Spring Boot 4.0.6** and **Java 26** using virtual threads, Jetty server, and Maven.
+This is a **Telegram bot** (Animemizer Bot) that helps users discover anime by integrating with Shikimori (anime data), Kinopoisk API Unofficial, AniLiberty, and OpenRouter (watch-link resolution). Built with **Spring Boot 4.0.6** and **Java 26** using virtual threads, Jetty server, and Maven.
 
 ## Tech Stack
 
@@ -118,13 +118,13 @@ Telegram Update → PollingBot / WebhookController
 
 1. Create package: `integration/{provider}/`
 2. DTOs in `dto/` as Records matching the provider's API response
-3. `{Provider}Client` — HTTP interface using `@HttpExchange` + `@PostExchange`/`@GetExchange` (for JSON APIs like Shikimori, Tavily)
+3. `{Provider}Client` — HTTP interface using `@HttpExchange` + `@PostExchange`/`@GetExchange` (for JSON APIs like Shikimori, Kinopoisk, and AniLiberty)
 4. `{Provider}WatchLinkResolver` — implements the `WatchLinkResolver` interface (`resolveWatchUrl(Anime)`)
 5. Add provider config to `application.yaml`
 
 ### HTTP Client Pattern
 
-For JSON API providers (Shikimori, Tavily), use Spring's declarative HTTP clients:
+For JSON API providers (Shikimori, Kinopoisk, AniLiberty, OpenRouter), use Spring's declarative HTTP clients:
 - Interface annotated with `@HttpExchange` and `@GetExchange`/`@PostExchange` methods
 - Configured via `RestClient` beans and `HttpServiceProxyFactory` in `HttpClientConfig`
 - Registered with `@ImportHttpServices`
@@ -140,7 +140,7 @@ For JSON API providers (Shikimori, Tavily), use Spring's declarative HTTP client
 | Text handlers | `bot/handler/text/` |
 | Message building | `bot/message/AnimeMessageBuilder.java` |
 | Telegram utilities | `bot/message/TelegramMessageUtils.java` |
-| Integrations | `integration/{shikimori,tavily}` |
+| Integrations | `integration/{shikimori,kinopoisk,aniliberty,openrouter}` |
 | Domain models | `core/anime/` |
 | Watchlist tracking | `core/watchlist/` |
 | Telegram user state | `core/telegramuser/` |
@@ -149,7 +149,7 @@ For JSON API providers (Shikimori, Tavily), use Spring's declarative HTTP client
 | Exception handling | `exception/GlobalExceptionHandler.java` |
 | HTTP client config | `config/HttpClientConfig.java` |
 | Cache config | `config/CacheConfig.java` |
-| Config properties | `config/props/` (TelegramBotProperties, AnimeUrlProperties, TavilyProperties) |
+| Config properties | `config/props/` (TelegramBotProperties, ShikimoriProperties, KinopoiskProperties, AnilibertyProperties, OpenRouterProperties) |
 
 ## Testing Conventions
 

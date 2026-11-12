@@ -2,9 +2,8 @@ package pro.zerobyte.animemizerbot.integration.shikimori;
 
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
-import pro.zerobyte.animemizerbot.config.props.AnimeUrlProperties;
+import pro.zerobyte.animemizerbot.config.props.ShikimoriProperties;
 import pro.zerobyte.animemizerbot.core.anime.Anime;
-import pro.zerobyte.animemizerbot.core.anime.AnimeLink;
 import pro.zerobyte.animemizerbot.core.anime.AnimeSource;
 import pro.zerobyte.animemizerbot.integration.shikimori.dto.ShikimoriAnimeDto;
 import pro.zerobyte.animemizerbot.integration.shikimori.dto.ShikimoriAnimeRelatedDto;
@@ -14,14 +13,13 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Set;
 
 @Component
 public class ShikimoriMapper {
-    private final AnimeUrlProperties animeUrlProperties;
+    private final ShikimoriProperties shikimoriProperties;
 
-    public ShikimoriMapper(AnimeUrlProperties animeUrlProperties) {
-        this.animeUrlProperties = animeUrlProperties;
+    public ShikimoriMapper(ShikimoriProperties shikimoriProperties) {
+        this.shikimoriProperties = shikimoriProperties;
     }
 
     public Anime toEntity(ShikimoriAnimeDto dto, List<ShikimoriAnimeRelatedDto> relatedAnimes) {
@@ -34,7 +32,7 @@ public class ShikimoriMapper {
                 dto.russian(),
                 CollectionUtils.firstElement(dto.english()),
                 dto.description(),
-                animeUrlProperties.getUrlFor(AnimeSource.SHIKIMORI) + dto.image().original(),
+                shikimoriProperties.resolvedBaseUrl() + dto.image().original(),
                 dto.kind(),
                 Anime.computeIsReleased(dto.ongoing(), dto.episodes(), dto.episodesAired()),
                 dto.anons(),
@@ -45,8 +43,7 @@ public class ShikimoriMapper {
                 dto.releasedOn(),
                 toLocalDateTime(dto.updatedAt()),
                 toLocalDateTime(dto.nextEpisodeAt()),
-                null,
-                Set.of(new AnimeLink(null, null, AnimeSource.SHIKIMORI, String.valueOf(dto.id())))
+                null
         );
     }
 

@@ -4,7 +4,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import pro.zerobyte.animemizerbot.core.anime.Anime;
-import pro.zerobyte.animemizerbot.core.anime.AnimeLink;
 import pro.zerobyte.animemizerbot.core.watchlist.WatchStatus;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
@@ -13,7 +12,6 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -22,16 +20,15 @@ class AnimeMessageBuilderTest {
     private final AnimeMessageBuilder builder = new AnimeMessageBuilder();
 
     private Anime newAnime(String name, String russianName, Integer episodes,
-                           String prequelPublicId, String sequelPublicId, Set<AnimeLink> links) {
-        return newAnime(name, russianName, episodes, prequelPublicId, sequelPublicId, links, null);
+                           String prequelPublicId, String sequelPublicId) {
+        return newAnime(name, russianName, episodes, prequelPublicId, sequelPublicId, null);
     }
 
     private Anime newAnime(String name, String russianName, Integer episodes,
-                           String prequelPublicId, String sequelPublicId, Set<AnimeLink> links,
-                           String watchUrl) {
+                           String prequelPublicId, String sequelPublicId, String watchUrl) {
         return new Anime(1L, "shikimori_1", prequelPublicId, sequelPublicId, name, russianName, null,
                 "desc", "poster.jpg", "tv", true, false, false, episodes, episodes,
-                LocalDate.now(), LocalDate.now(), LocalDateTime.now(), null, watchUrl, links);
+                LocalDate.now(), LocalDate.now(), LocalDateTime.now(), null, watchUrl);
     }
 
     @Nested
@@ -41,7 +38,7 @@ class AnimeMessageBuilderTest {
         @Test
         void should_includeRussianName_when_available() {
             // Given
-            Anime anime = newAnime("Test Anime", "Тестовое аниме", 12, null, null, Set.of());
+            Anime anime = newAnime("Test Anime", "Тестовое аниме", 12, null, null);
 
             // When
             String caption = builder.buildCaption(anime, 0, null);
@@ -53,7 +50,7 @@ class AnimeMessageBuilderTest {
         @Test
         void should_fallbackToName_when_russianNameIsNull() {
             // Given
-            Anime anime = newAnime("Test Anime", null, 12, null, null, Set.of());
+            Anime anime = newAnime("Test Anime", null, 12, null, null);
 
             // When
             String caption = builder.buildCaption(anime, 0, null);
@@ -65,7 +62,7 @@ class AnimeMessageBuilderTest {
         @Test
         void should_showQuestionMark_when_episodesIsNull() {
             // Given
-            Anime anime = newAnime("Test Anime", "Тест", null, null, null, Set.of());
+            Anime anime = newAnime("Test Anime", "Тест", null, null, null);
 
             // When
             String caption = builder.buildCaption(anime, 0, null);
@@ -77,7 +74,7 @@ class AnimeMessageBuilderTest {
         @Test
         void should_includeWatchStatus_when_provided() {
             // Given
-            Anime anime = newAnime("Test Anime", "Тест", 12, null, null, Set.of());
+            Anime anime = newAnime("Test Anime", "Тест", 12, null, null);
 
             // When
             String caption = builder.buildCaption(anime, 0, WatchStatus.WATCHING);
@@ -89,7 +86,7 @@ class AnimeMessageBuilderTest {
         @Test
         void should_notIncludeWatchStatus_when_null() {
             // Given
-            Anime anime = newAnime("Test Anime", "Тест", 12, null, null, Set.of());
+            Anime anime = newAnime("Test Anime", "Тест", 12, null, null);
 
             // When
             String caption = builder.buildCaption(anime, 0, null);
@@ -106,7 +103,7 @@ class AnimeMessageBuilderTest {
         @Test
         void should_containEpisodeButtons_when_notAllWatched() {
             // Given
-            Anime anime = newAnime("Test Anime", "Тест", 12, null, null, Set.of());
+            Anime anime = newAnime("Test Anime", "Тест", 12, null, null);
 
             // When
             InlineKeyboardMarkup markup = builder.createInlineKeyboard(anime, 5);
@@ -121,7 +118,7 @@ class AnimeMessageBuilderTest {
         @Test
         void should_containOnlyMinusButton_when_allEpisodesWatched() {
             // Given
-            Anime anime = newAnime("Test Anime", "Тест", 12, null, null, Set.of());
+            Anime anime = newAnime("Test Anime", "Тест", 12, null, null);
 
             // When
             InlineKeyboardMarkup markup = builder.createInlineKeyboard(anime, 12);
@@ -136,7 +133,7 @@ class AnimeMessageBuilderTest {
         @Test
         void should_containPrequelButton_when_prequelExists() {
             // Given
-            Anime anime = newAnime("Test Anime", "Тест", 12, "shikimori_999", null, Set.of());
+            Anime anime = newAnime("Test Anime", "Тест", 12, "shikimori_999", null);
 
             // When
             InlineKeyboardMarkup markup = builder.createInlineKeyboard(anime, 0);
@@ -152,7 +149,7 @@ class AnimeMessageBuilderTest {
         @Test
         void should_containSequelButton_when_sequelExists() {
             // Given
-            Anime anime = newAnime("Test Anime", "Тест", 12, null, "shikimori_1001", Set.of());
+            Anime anime = newAnime("Test Anime", "Тест", 12, null, "shikimori_1001");
 
             // When
             InlineKeyboardMarkup markup = builder.createInlineKeyboard(anime, 0);
@@ -168,7 +165,7 @@ class AnimeMessageBuilderTest {
         @Test
         void should_containStatusButtons() {
             // Given
-            Anime anime = newAnime("Test Anime", "Тест", 12, null, null, Set.of());
+            Anime anime = newAnime("Test Anime", "Тест", 12, null, null);
 
             // When
             InlineKeyboardMarkup markup = builder.createInlineKeyboard(anime, 0);
@@ -185,8 +182,8 @@ class AnimeMessageBuilderTest {
         @Test
         void should_containWatchButton_when_watchUrlExists() {
             // Given
-            Anime anime = newAnime("Test Anime", "Тест", 12, null, null, Set.of(),
-                    "https://kinokino.win/series/123");
+            Anime anime = newAnime("Test Anime", "Тест", 12, null, null,
+                    "https://www.kinokino.red/series/123/");
 
             // When
             InlineKeyboardMarkup markup = builder.createInlineKeyboard(anime, 0);
@@ -198,14 +195,14 @@ class AnimeMessageBuilderTest {
                     .filter(btn -> btn.getUrl() != null)
                     .toList();
             assertThat(urlButtons).hasSize(1);
-            assertThat(urlButtons.get(0).getText()).isEqualTo("▶️ Смотреть");
-            assertThat(urlButtons.get(0).getUrl()).isEqualTo("https://kinokino.win/series/123");
+            assertThat(urlButtons.get(0).getText()).isEqualTo("Смотреть");
+            assertThat(urlButtons.get(0).getUrl()).isEqualTo("https://www.kinokino.red/series/123/");
         }
 
         @Test
         void should_notContainWatchButton_when_noWatchUrl() {
             // Given
-            Anime anime = newAnime("Test Anime", "Тест", 12, null, null, Set.of());
+            Anime anime = newAnime("Test Anime", "Тест", 12, null, null);
 
             // When
             InlineKeyboardMarkup markup = builder.createInlineKeyboard(anime, 0);

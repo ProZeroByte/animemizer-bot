@@ -60,7 +60,7 @@ class AnimeServiceTest {
 
     private Anime newAnime(Long id, String publicId, String name, String russianName) {
         return new Anime(id, publicId, null, null, name, russianName, null,
-                null, null, null, false, false, false, 12, null, null, null, null, null, null, null);
+                null, null, null, false, false, false, 12, null, null, null, null, null, null);
     }
 
     @Nested
@@ -86,7 +86,8 @@ class AnimeServiceTest {
             // Given - anime with no watch url, and a resolver that returns a link
             Anime anime = newAnime(ANIME_ID, PUBLIC_ID, ANIME_NAME, RUSSIAN_NAME);
             when(repository.findById(ANIME_ID)).thenReturn(Optional.of(anime));
-            when(watchLinkResolver.resolveWatchUrl(anime)).thenReturn(Optional.of("https://kinokino.win/series/1"));
+            when(watchLinkResolver.resolveWatchUrl(anime))
+                    .thenReturn(Optional.of("https://www.kinokino.red/series/1/"));
 
             // When
             animeService.findById(ANIME_ID);

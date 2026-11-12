@@ -18,9 +18,12 @@ telegram:
     token: "dummy-test-token"
     username: "dummy-test-bot"
 
-tavily:
-  api-key: "dummy-test-tavily-key"
-  base-url: https://api.tavily.com
+kinopoisk:
+  api-key: "dummy-test-kinopoisk-key"
+  base-url: https://kinopoiskapiunofficial.tech
+
+aniliberty:
+  base-url: https://www.aniliberty.top
 
 openrouter:
   api-key: "dummy-test-openrouter-key"

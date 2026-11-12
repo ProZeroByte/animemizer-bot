@@ -21,7 +21,7 @@ There is no dedicated lint task configured in `pom.xml`. Treat `mvn test` and `m
 
 ## High-level architecture
 
-This is a Spring Boot Telegram bot that searches anime via Shikimori and resolves a watch link via Tavily web search.
+This is a Spring Boot Telegram bot that searches anime via Shikimori and resolves watch links via Kinopoisk API Unofficial, AniLiberty, and OpenRouter.
 
 - `Application.java` boots the app and enables scheduling.
 - `TelegramBotService` is the entry point for Telegram updates in both long-polling (`dev`) and webhook (`prod`) modes.
@@ -31,7 +31,7 @@ This is a Spring Boot Telegram bot that searches anime via Shikimori and resolve
   - `CallbackHandler` for inline keyboard actions like episode changes, watch-state updates, and related anime navigation
   - `TextHandler` for free-form anime search and `/search`
 - `AnimeService` owns fetch/save logic and resolves a watch link before persisting anime data.
-- `ShikimoriConnector` and `ShikimoriClient` are the primary data source; `TavilyWatchLinkResolver` resolves the watch link.
+- `ShikimoriConnector` and `ShikimoriClient` are the primary data source; `KinopoiskWatchLinkResolver` resolves links using Kinopoisk first and AniLiberty as fallback, with OpenRouter selecting among returned candidates.
 - `WatchlistService` and repository-backed `core/watchlist` model track per-user progress and statuses.
 - Data access uses Spring Data JDBC (not JPA), with PostgreSQL in production and H2 in tests.
 
@@ -58,7 +58,7 @@ The non-obvious routing behavior matters: text handlers are evaluated before com
 ### Provider integration model
 
 - Shikimori is the main source of anime data via `@HttpExchange` REST clients and mapper classes.
-- Tavily is used to resolve a single watch link via `@HttpExchange` REST client configured in `HttpClientConfig`.
+- Kinopoisk API Unofficial and AniLiberty use `@HttpExchange` REST clients configured in `HttpClientConfig`; OpenRouter selects a matching candidate and must not invent IDs or URLs.
 - Watch link resolution is centralized through the `WatchLinkResolver` interface; failed lookups are cached to avoid repeated searches.
 - The watch link is stored on the `Anime` entity (`watchUrl`) and rendered as a single "Смотреть" button.
 
@@ -87,7 +87,7 @@ For a targeted change in bot behavior, start with the routing and service layer:
 - `src/main/java/pro/zerobyte/animemizerbot/config/HttpClientConfig.java`
 - `src/main/java/pro/zerobyte/animemizerbot/integration/shikimori/ShikimoriConnector.java`
 
-For a watch-link change, read the `integration/tavily` package and `TavilyProperties` next.
+For a watch-link change, read `integration/kinopoisk`, `integration/aniliberty`, `integration/openrouter`, and their config properties.
 
 ## Relevant project docs
 

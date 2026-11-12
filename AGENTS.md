@@ -1,149 +1,86 @@
 # AGENTS.md — Animemizer Bot
 
-Telegram bot for anime discovery. Integrates Shikimori (primary data source) and Tavily (watch link search).
+Telegram bot for anime discovery. Shikimori is the data source; Kinopoisk API Unofficial, AniLiberty, and OpenRouter resolve a single watch link per anime.
 
-## Tech Stack (exact versions)
-
-- **Java 26** — virtual threads enabled by default, Records, pattern matching, Stream Gatherers
-- **Spring Boot 4.1.1** / Spring Framework 7.x (version managed by Spring Boot parent)
-- **Jetty** (not Tomcat) — Tomcat is excluded in pom.xml
-- **Jackson 3.x + 2.x** (dual) — both `tools.jackson` and `com.fasterxml.jackson` mappers configured in `JacksonConfig.java`; version managed by Spring Boot parent
-- **PostgreSQL** (prod) / **H2** (test) via `spring-boot-starter-data-jdbc` (not JPA)
-- **Caffeine** cache — 4 named caches configured in `CacheConfig.java`
-- **telegrambots 10.3.0** — `telegrambots-springboot-longpolling-starter` + `telegrambots-client-jetty-adapter`
-- **Jsoup** for HTML scraping (legacy — no longer used by active integrations)
-
-## Build & Run
+## Build, test, run
 
 ```powershell
-mvn clean package                                   # build
-mvn test                                            # run tests (uses H2 + application-test.yaml)
-java -jar target/animemizer-bot-*.jar --spring.profiles.active=dev   # long polling
-java -jar target/animemizer-bot-*.jar --spring.profiles.active=prod  # webhook
+mvn test                       # H2 + test profile, no env vars needed
+mvn test -Dtest=ClassName      # single class; nested: -Dtest=Outer$Inner
+mvn -q -DskipTests compile     # fast compile check
+mvn clean package              # jar in target/
+java -jar target/animemizer-bot-*.jar --spring.profiles.active=prod
 ```
 
-Docker: `docker build -t animemizer-bot:latest . && docker-compose up -d`
+- `mvnw` / `mvnw.cmd` exist; on Windows use `.\mvnw.cmd` if `mvn` is unavailable.
+- No lint, formatter, codegen, or CI config exists. `mvn compile` + `mvn test` are the validation baseline.
+- `application.yaml` sets `spring.profiles.active: dev`, so a plain `spring-boot:run` / jar start uses long polling.
+- The IDE run config loads `.env`; running via Maven does not, so export env vars first.
+- `local_scripts/deploy_to_micro_2.sh` builds and deploys to a hardcoded remote host. Do not run it unless explicitly asked.
 
-No single-test shortcut configured — standard `mvn test -Dtest=ClassName` works.
-
-## Required Environment Variables
+## Required environment variables
 
 ```
 TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_USERNAME, TELEGRAM_BOT_API_SECRET_TOKEN
 DATASOURCE_URL, DATASOURCE_USERNAME, DATASOURCE_PASSWORD
-TAVILY_API_KEY
-TELEGRAM_BOT_WEBHOOK_PATH, TELEGRAM_BOT_WEBHOOK_BASE_URL (prod only)
+KINOPOISK_API_KEY, OPENROUTER_API_KEY
+TELEGRAM_BOT_WEBHOOK_PATH, TELEGRAM_BOT_WEBHOOK_BASE_URL   # prod/webhook only
 ```
 
-Tests use dummy values in `application-test.yaml` — no env vars needed for `mvn test`.
+`TelegramBotProperties`, `KinopoiskProperties`, and `OpenRouterProperties` use `@Validated` + `@NotBlank`, so missing values fail startup. Tests use dummy values from `application-test.yaml`.
 
-## Architecture — What's Non-Obvious
+## Testing quirks
 
-### Update Routing (`BotUpdateProcessor.java`)
+- `ShikimoriConnectorIntegrationTest` is **not** disabled and calls the live Shikimori API (search "Naruto"). `mvn test` therefore needs network and can be slow/flaky; skip with `-Dtest='!ShikimoriConnectorIntegrationTest'` when offline.
+- `RealSiteSessionTest` is `@Disabled`; `KinopoiskGraphQLIntegrationTest` runs only when `KINOPOISK_API_KEY` is set.
+- `@SpringBootTest` tests import `TestTelegramConfig` to replace `TelegramClient` with a Mockito mock.
+- Schema changes require updating `src/test/resources/schema.sql` manually (tables: `anime`, `telegram_user`, `watchlist`). There is no Flyway/Liquibase; production schemas are managed outside the app.
+- JSON fixtures live in `src/test/resources/json/shikimori/`.
+
+## Update routing (`BotUpdateProcessor.java`)
 
 ```
-Update → switch (pattern matching on Update type)
-  hasCallbackQuery?      → CallbackHandler chain (first-match by canHandle)
-  hasMessage+hasText?    → TextHandler chain first, then CommandHandler map fallback
-  else                   → "unsupported" reply
+Update → callback query?  → CallbackHandler chain (first canHandle wins)
+       → text message?    → TextHandler chain first, then CommandHandler map
+       → otherwise        → "unsupported" reply
 ```
 
-**TextHandlers are checked BEFORE CommandHandlers.** `SearchTextHandler` catches all text including `/search`, so it must return `false` for other commands or they'll be swallowed.
+- **TextHandlers run before CommandHandlers.** `SearchTextHandler` intentionally accepts all non-command text and `/search`; it must return `false` for every other command or it swallows them.
+- Handlers return `PartialBotApiMethod<?>`. Returning `null` means the handler sends/edits Telegram messages itself; the processor skips `execute()`.
+- Callback data is `PREFIX:payload` from `AnimemizerBotCallback` (`NEXT_EPISODE:123`, `SET_WATCH_STATUS:123:WATCHING`). Watch-link callbacks are `providerCode:publicId`. Prefixes must be unique because routing is first-match.
+- Handlers are `@Component` beans auto-collected via `List<>` injection.
 
-Handler return type is `PartialBotApiMethod<?>`. Returning `null` means "I'm managing my own Telegram responses" (placeholder-then-replace pattern). The processor skips `execute()` for null returns.
+## Patterns and integrations
 
-### Command Routing
+- **Placeholder-then-replace**: slow flows send a placeholder immediately, do async work on `applicationTaskExecutor`, then edit it (`EditMessageText` / `EditMessageCaption` / `EditMessageMedia`); if the placeholder send fails, return the result directly as a fallback.
+- **Watch-link enrichment**: `AnimeService.enrichAndSaveIfRequired()` runs on every anime fetch, resolves one URL via `WatchLinkResolver`, and persists it. Failures are cached 24h in `providerFailures` to avoid repeat lookups.
+- `KinopoiskWatchLinkResolver` searches Kinopoisk first (rewrites `kinopoisk.ru` → `kinokino.red`), then AniLiberty; OpenRouter only *selects* among returned candidates and must never invent IDs or URLs. AniLiberty results carry the Shikimori ID as a matching signal.
+- Active integrations use `@HttpExchange` clients, not HTML scraping. Jsoup remains only in a manual Kinopoisk GraphQL test.
+- New `@HttpExchange` clients must be registered in `HttpClientConfig` with a dedicated `RestClient` bean and `HttpServiceProxyFactory`.
+- `WebConfig` registers a custom `AbstractHttpMessageConverter` routing `BotApiMethod`/`Update` through `Json2Service` (Jackson 2.x). Do not replace it with the default converter.
 
-- `CommandHandler` — matched by exact command name from `AnimemizerBotCommand.getCommandName()`
-- `CallbackHandler` — matched by `AnimemizerBotCallback` prefix (e.g., `NEXT_EPISODE:`)
-- `TextHandler` — flexible predicate via `canHandle(String)`
-- All handlers are `@Component` and auto-registered via Spring `List<>` injection
+## Domain model (Spring Data JDBC, not JPA)
 
-### Callback Data Format
+- All entities/DTOs are records with `@Table` / `@MappedCollection`.
+- `Anime` is immutable; use `withId()`, `withDescription()`, `withWatchUrl()`.
+- `AnimeSource.SHIKIMORI` prefixes public IDs with `shikimori_`; use `createPublicId()` / `extractIdFromPublicId()`.
+- `WatchStatus` owns transition logic (`onAllEpisodesWatched()`, `onRewatchStarted()`, `isTerminal()`).
+- Caches are declared in `CacheConfig` (3 total): `animeById` 24h, `animeByTitle` 3h, `providerFailures` 24h. Title cache keys are lowercase for case-insensitive lookup.
 
-All callbacks: `PREFIX:payload` managed by `AnimemizerBotCallback` enum.
-- Simple: `NEXT_EPISODE:123`
-- Composite: `SET_WATCH_STATUS:123:WATCHING`
-- Watch link: `providerCode:publicId` (parsed by `extractWatchLinkPayload`)
+## Code conventions
 
-When adding a new callback enum value, the prefix must be unique — routing iterates all handlers, first match wins.
+- Constructor injection only — no field `@Autowired`.
+- No `var`; use explicit local variable types.
+- No `catch (Exception)`; catch specific types and return `Optional.empty()` on lookup failures.
+- SLF4J via `LoggerFactory` — no Lombok.
+- Async: `CompletableFuture` with `@Qualifier("applicationTaskExecutor") TaskExecutor` (virtual threads).
+- Partition rows with `Gatherers.windowFixed(n)` (e.g., status buttons in rows of 3).
+- Build Telegram text/keyboards via `bot/message` (`AnimeMessageBuilder`, `TelegramMessageUtils`) instead of ad-hoc strings; escape Markdown with `TelegramMessageUtils`.
+- Tests: JUnit 6 + AssertJ, `// Given` / `// When` / `// Then`, naming `should_[Expected]_when_[Condition]`.
 
-### Placeholder-then-Replace Pattern
+## Other instruction sources
 
-For slow operations (search, navigation, list):
-1. Send placeholder message immediately
-2. Do async work
-3. Edit placeholder in-place (`EditMessageText` / `EditMessageCaption` / `EditMessageMedia`)
-4. If placeholder send fails, return fallback result directly
-
-### Watch Link Enrichment
-
-`AnimeService.enrichAndSaveIfRequired()` is called on every anime fetch. It resolves a single watch link via `WatchLinkResolver` when the anime has none, and persists it. Failed lookups are cached 24h in `providerFailures` to avoid repeated searches.
-
-**Integrations:**
-- **Shikimori**: `@HttpExchange` client → `ShikimoriMapper` → full `Anime` domain objects (primary source)
-- **Tavily**: `@HttpExchange` client → `TavilyWatchLinkResolver` → single watch URL
-
-`TavilyWatchLinkResolver` resolution order: (1) direct `kinopoisk.ru` link rewritten to `kinokino.win`, (2) `aniliberty.top` link, (3) general web search with the Russian title.
-
-New `@HttpExchange` clients must be registered in `HttpClientConfig` with a dedicated `RestClient` bean and `HttpServiceProxyFactory`.
-
-### Domain Model Quirks
-
-- All entities are **Records** with `@Table`/`@MappedCollection` (Spring Data JDBC, not JPA)
-- `Anime` has `withId()`, `withDescription()`, `withLinks()`, `withWatchUrl()` copy methods because Records are immutable
-- `AnimeSource` prefix: `shikimori_` — use `createPublicId()` / `extractIdFromPublicId()`
-- `WatchStatus` has transition logic: `onAllEpisodesWatched()`, `onRewatchStarted()`, `isTerminal()`
-
-### HTTP Client Setup
-
-`HttpClientConfig` manually builds `RestClient` → `RestClientAdapter` → `HttpServiceProxyFactory` → client proxy for each `@HttpExchange` interface. Spring's declarative HTTP client pattern, not Feign.
-
-### WebConfig — Custom Telegram JSON Converter
-
-`WebConfig` registers a custom `AbstractHttpMessageConverter` that routes `BotApiMethod` and `Update` serialization through `Json2Service` (which uses Jackson 2.x `ObjectMapper`). This is needed because the telegrambots library expects specific JSON handling.
-
-## Code Conventions
-
-- **Constructor injection only** — no `@Autowired` on fields
-- **Records for all DTOs** and domain entities
-- **No `var`** — always explicit type names for local variables
-- **No `catch (Exception)`** — catch specific types, return `Optional.empty()` on failures
-- **SLF4J with `LoggerFactory`** — no Lombok `@Slf4j`
-- **Async**: `CompletableFuture` with `@Qualifier("applicationTaskExecutor") TaskExecutor`
-- **Stream Gatherers**: `Gatherers.windowFixed(n)` for partitioning (e.g., status buttons in rows of 3)
-
-## Testing
-
-- **JUnit 6 + AssertJ**, BDD style: `// Given` / `// When` / `// Then`
-- **Naming**: `should_[Expected]_when_[Condition]`
-- **Test profile**: `application-test.yaml` → H2 in-memory, cache disabled, dummy Telegram + Tavily tokens
-- **Schema**: `src/test/resources/schema.sql` auto-loaded — contains all 4 tables (`anime`, `anime_link`, `telegram_user`, `watchlist`). Update when adding new entities or columns.
-- Test JSON fixtures in `src/test/resources/json/shikimori/`
-
-## Configuration
-
-**Profiles:**
-- `dev` — long polling (`TelegramBotConfig` `@Profile("dev")` bean), DEBUG logging
-- `prod` — webhook (`WebhookController` + `TelegramBotConfig.setWebhook()` bean + `TelegramBotService.initialize()`), INFO logging
-- `test` — H2, disabled cache, dummy tokens
-
-**App config keys (`app.*`):**
-- `app.anime-sources` — `Map<AnimeSource, String>` of provider base URLs
-
-**Tavily config keys (`tavily.*`):**
-- `tavily.api-key` — Tavily API key (from `TAVILY_API_KEY`)
-- `tavily.base-url` — Tavily API base URL (default `https://api.tavily.com`)
-
-`TelegramBotProperties` and `TavilyProperties` use `@Validated` + `@NotBlank` — missing token/username/api-key fails fast at startup.
-
-## Deployment
-
-Docker: Alpine JRE 26, 416MB memory limit, `-Xmx256m -Xms256m`, timezone `Europe/Warsaw`.
-Internal port 8080 exposed via `external-net` Docker network (reverse proxy not included in docker-compose.yml).
-
-## Existing Instruction Sources
-
-- `.github/instructions/spring-boot-conventions.instructions.md` — Copilot instructions covering same conventions (apply to `src/**`)
-- `.mimocode/instructions.md` — Mimo AI project context (derived from AGENTS.md + conventions)
-- `PROXYAI.md` — older assistant prompt with testing and coding standards
+- `.github/copilot-instructions.md` — condensed build/architecture notes.
+- `.github/instructions/spring-boot-conventions.instructions.md` — Copilot rules for `src/**`.
+- `README.md` — features, commands, deployment details.
+- `PROXYAI.md` — older assistant prompt; use only if it does not conflict with this file.

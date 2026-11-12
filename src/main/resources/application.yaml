@@ -33,15 +33,17 @@ telegram:
     username: ${TELEGRAM_BOT_USERNAME}
     secret-token: ${TELEGRAM_BOT_API_SECRET_TOKEN}
 
-app:
-  anime-sources:
-    SHIKIMORI: https://shikimori.io
+shikimori:
+  base-url: https://shikimori.io
 
-tavily:
-  api-key: ${TAVILY_API_KEY}
-  base-url: https://api.tavily.com
+kinopoisk:
+  api-key: ${KINOPOISK_API_KEY}
+  base-url: https://kinopoiskapiunofficial.tech
+
+aniliberty:
+  base-url: https://www.aniliberty.top
 
 openrouter:
   api-key: ${OPENROUTER_API_KEY}
   base-url: https://openrouter.ai/api/v1
-  model: openai/gpt-4o-mini
+  model: ~openai/gpt-luna-latest

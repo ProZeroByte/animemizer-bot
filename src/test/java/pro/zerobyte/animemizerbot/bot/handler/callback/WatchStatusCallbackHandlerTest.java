@@ -169,5 +169,20 @@ class WatchStatusCallbackHandlerTest {
             // Then
             assertThat(result).isNull();
         }
+
+        @Test
+        void should_returnNull_when_legacyRewatchingStatus() {
+            // Given — old keyboards still send REWATCHING, which was removed from WatchStatus
+            WatchStatusCallbackHandler handler = new WatchStatusCallbackHandler(
+                    animeService, watchlistService, messageBuilder);
+            Update update = buildCallbackUpdate("SET_WATCH_STATUS:42:REWATCHING", USER_ID, false);
+
+            // When
+            PartialBotApiMethod<?> result = handler.handle(update);
+
+            // Then
+            assertThat(result).isNull();
+            Mockito.verifyNoInteractions(watchlistService);
+        }
     }
 }

@@ -64,8 +64,8 @@ Update → callback query?  → CallbackHandler chain (first canHandle wins)
 - All entities/DTOs are records with `@Table` / `@MappedCollection`.
 - `Anime` is immutable; use `withId()`, `withDescription()`, `withWatchUrl()`.
 - `AnimeSource.SHIKIMORI` prefixes public IDs with `shikimori_`; use `createPublicId()` / `extractIdFromPublicId()`.
-- `WatchStatus` owns transition logic (`onAllEpisodesWatched()`, `onRewatchStarted()`, `isTerminal()`).
-- Caches are declared in `CacheConfig` (3 total): `animeById` 24h, `animeByTitle` 3h, `providerFailures` 24h. Title cache keys are lowercase for case-insensitive lookup.
+- `WatchStatus` owns transition logic (`onAllEpisodesWatched()`, `isTerminal()`). `REWATCHING` was removed; legacy `SET_WATCH_STATUS:<id>:REWATCHING` callbacks are ignored gracefully.
+- Caches are declared in `CacheConfig` (4 total): `animeById` 24h, `animeByTitle` 3h, `providerFailures` 24h, `animeRefreshCooldown` 12h. Title cache keys are lowercase for case-insensitive lookup. The refresh button (`RefreshCallbackHandler` → `AnimeService.refreshById`) rate-limits live Shikimori re-fetches per anime via `animeRefreshCooldown`; while active, taps do nothing.
 
 ## Code conventions
 

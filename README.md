@@ -35,7 +35,7 @@ The bot operates in two modes: **long polling** (development) and **webhook** (p
 - **Anime Search** — type any anime title in the chat to find it via Shikimori's API, with results displayed as an interactive card with poster, description, and inline keyboard
 - **Batch Search** — search for multiple anime titles at once with `/batch`, separated by commas (up to 300 titles)
 - **Episode Tracking** — increment or decrement watched episodes directly from the anime card via `+1` / `-1` buttons
-- **Watch Status Management** — set status to Watching, Planned, Completed, Rewatching, On Hold, or Dropped via inline buttons
+- **Watch Status Management** — set status to Watching, Planned, Completed, On Hold, or Dropped via inline buttons
 - **Prequel/Sequel Navigation** — navigate anime franchise chains with directional buttons
 - **Watchlist** — view all tracked anime in a paginated list sorted alphabetically
 - **Watch Link** — a single "Смотреть" button shown when a link is found via Kinopoisk or AniLiberty
@@ -66,7 +66,8 @@ When an anime is found, the bot displays an interactive card with these button g
 | `+1 серия` | Increase watched episode count |
 | `⬅️ Предыстория` | Load the prequel anime (if available) |
 | `Продолжение ➡️` | Load the sequel anime (if available) |
-| `👀` / `📋` / `✅` / `🔄` / `⏸` / `❌` | Set watch status (Watching / Planned / Completed / Rewatching / On Hold / Dropped) |
+| `👀` / `📋` / `✅` / `⏸` / `❌` | Set watch status (Watching / Planned / Completed / On Hold / Dropped) |
+| `🔄` | Force-sync with Shikimori to pick up newly released episodes (ongoing anime only; at most once per 12 hours, otherwise does nothing) |
 | `Смотреть` | Direct watch link (shown only when a link was resolved) |
 
 ## Supported Anime Providers
@@ -250,7 +251,7 @@ animemizer-bot/
 │   ├── config/
 │   │   ├── TelegramBotConfig               # TelegramClient, long-polling (dev), webhook (prod)
 │   │   ├── HttpClientConfig                # RestClient + declarative HTTP clients
-│   │   ├── CacheConfig                     # 3 Caffeine caches
+│   │   ├── CacheConfig                     # 4 Caffeine caches
 │   │   ├── JacksonConfig                   # Jackson 3.x + 2.x mappers
 │   │   ├── WebConfig                       # Custom Telegram JSON converter
 │   │   ├── PropertiesConfig                # @EnableConfigurationProperties
@@ -440,6 +441,12 @@ To run a specific test class:
 - **Test schema**: `src/test/resources/schema.sql` (anime, telegram_user, watchlist tables)
 
 Existing PostgreSQL databases may still contain the unused `anime_link` table. Back up the database before removing it manually with `DROP TABLE IF EXISTS anime_link;`; the application does not modify existing schemas automatically.
+
+The `REWATCHING` watch status was removed from the application. Before deploying, migrate existing rows — otherwise reading a `watchlist` row with `status = 'REWATCHING'` fails:
+
+```sql
+UPDATE watchlist SET status = 'WATCHING' WHERE status = 'REWATCHING';
+```
 
 ### Test Coverage Areas
 

@@ -11,7 +11,8 @@ public enum AnimemizerBotCallback {
     LOAD_SEQUEL("LOAD_SEQUEL"),
     LOAD_PREQUEL("LOAD_PREQUEL"),
     SET_WATCH_STATUS("SET_WATCH_STATUS"),
-    LIST_PAGE("LIST_PAGE");
+    LIST_PAGE("LIST_PAGE"),
+    REFRESH("REFRESH");
 
     private static final Logger log = LoggerFactory.getLogger(AnimemizerBotCallback.class);
     private static final String SEPARATOR = ":";

@@ -38,6 +38,18 @@ class AnimemizerBotCallbackTest {
             assertThat(result).isEqualTo("SET_WATCH_STATUS:42");
             assertThat(result).startsWith(callback.getPrefix());
         }
+
+        @Test
+        void should_buildCorrectFormat_when_refreshCallback() {
+            // Given
+            AnimemizerBotCallback callback = AnimemizerBotCallback.REFRESH;
+
+            // When
+            String result = callback.toCallbackData(42L);
+
+            // Then
+            assertThat(result).isEqualTo("REFRESH:42");
+        }
     }
 
     @Nested
@@ -95,6 +107,32 @@ class AnimemizerBotCallbackTest {
 
             // Then
             assertThat(result).isEqualTo(456L);
+        }
+
+        @Test
+        void should_extractId_when_refreshCallback() {
+            // Given
+            AnimemizerBotCallback callback = AnimemizerBotCallback.REFRESH;
+
+            // When
+            Long result = callback.extractId("REFRESH:42");
+
+            // Then
+            assertThat(result).isEqualTo(42L);
+        }
+
+        @Test
+        void should_supportRefreshPrefix() {
+            // Given
+            AnimemizerBotCallback callback = AnimemizerBotCallback.REFRESH;
+
+            // When
+            boolean supported = callback.isCallbackSupported("REFRESH:42");
+            boolean rejected = callback.isCallbackSupported("SET_WATCH_STATUS:42:WATCHING");
+
+            // Then
+            assertThat(supported).isTrue();
+            assertThat(rejected).isFalse();
         }
 
         @Test

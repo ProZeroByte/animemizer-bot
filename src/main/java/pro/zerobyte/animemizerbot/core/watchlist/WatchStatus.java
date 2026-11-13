@@ -6,7 +6,6 @@ public enum WatchStatus {
     WATCHING("Watching", "Смотрю"),
     PLANNED("Planned", "В планах"),
     COMPLETED("Completed", "Просмотрено"),
-    REWATCHING("Rewatching", "Пересматриваю"),
     ON_HOLD("On hold", "Отложено"),
     DROPPED("Dropped", "Брошено");
 
@@ -37,22 +36,11 @@ public enum WatchStatus {
 
     /**
      * Determines the appropriate status when all episodes have been watched.
-     * Returns COMPLETED if currently WATCHING or REWATCHING, otherwise keeps the current status.
+     * Returns COMPLETED if currently WATCHING, otherwise keeps the current status.
      */
     public WatchStatus onAllEpisodesWatched() {
         return switch (this) {
-            case WATCHING, REWATCHING -> COMPLETED;
-            default -> this;
-        };
-    }
-
-    /**
-     * Determines the appropriate status when rewatching is started from a completed state.
-     * Returns REWATCHING if currently COMPLETED, otherwise keeps the current status.
-     */
-    public WatchStatus onRewatchStarted() {
-        return switch (this) {
-            case COMPLETED -> REWATCHING;
+            case WATCHING -> COMPLETED;
             default -> this;
         };
     }

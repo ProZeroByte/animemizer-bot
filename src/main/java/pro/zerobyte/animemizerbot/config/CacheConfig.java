@@ -25,11 +25,13 @@ public class CacheConfig {
     public static final String ANIME_BY_ID = "animeById";
     public static final String ANIME_BY_TITLE = "animeByTitle";
     public static final String PROVIDER_FAILURES = "providerFailures";
+    public static final String ANIME_REFRESH_COOLDOWN = "animeRefreshCooldown";
 
     public enum CacheName {
         ANIME_BY_ID(CacheConfig.ANIME_BY_ID, Duration.ofHours(24), 1000),
         ANIME_BY_TITLE(CacheConfig.ANIME_BY_TITLE, Duration.ofHours(3), 500),
-        PROVIDER_FAILURES(CacheConfig.PROVIDER_FAILURES, Duration.ofHours(24), 2000);
+        PROVIDER_FAILURES(CacheConfig.PROVIDER_FAILURES, Duration.ofHours(24), 2000),
+        ANIME_REFRESH_COOLDOWN(CacheConfig.ANIME_REFRESH_COOLDOWN, Duration.ofHours(12), 2000);
 
         private final String cacheName;
         private final Duration ttl;

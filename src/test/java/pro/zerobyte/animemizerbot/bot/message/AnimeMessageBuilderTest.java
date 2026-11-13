@@ -31,6 +31,12 @@ class AnimeMessageBuilderTest {
                 LocalDate.now(), LocalDate.now(), LocalDateTime.now(), null, watchUrl);
     }
 
+    private Anime newOngoingAnime(String name, String russianName) {
+        return new Anime(1L, "shikimori_1", null, null, name, russianName, null,
+                "desc", "poster.jpg", "tv", false, false, true, 12, 8,
+                LocalDate.now(), null, LocalDateTime.now(), null, null);
+    }
+
     @Nested
     @DisplayName("buildCaption")
     class BuildCaption {
@@ -176,7 +182,58 @@ class AnimeMessageBuilderTest {
                     .flatMap(List::stream)
                     .map(InlineKeyboardButton::getText)
                     .toList();
-            assertThat(allButtonTexts).contains("👀", "📋", "✅");
+            assertThat(allButtonTexts).contains("👀", "📋", "✅", "⏸", "❌");
+        }
+
+        @Test
+        void should_placeRefreshButtonInSecondStatusRowFirstSlot() {
+            // Given
+            Anime anime = newAnime("Test Anime", "Тест", 12, null, null);
+
+            // When
+            InlineKeyboardMarkup markup = builder.createInlineKeyboard(anime, 0);
+
+            // Then
+            List<InlineKeyboardRow> rows = markup.getKeyboard();
+            InlineKeyboardRow firstStatusRow = rows.get(1);
+            InlineKeyboardRow secondStatusRow = rows.get(2);
+
+            assertThat(firstStatusRow.stream().map(InlineKeyboardButton::getText))
+                    .containsExactly("👀", "📋", "✅");
+            assertThat(secondStatusRow.stream().map(InlineKeyboardButton::getText))
+                    .containsExactly("🔄", "⏸", "❌");
+            assertThat(secondStatusRow.get(0).getCallbackData()).isEqualTo("REFRESH:1");
+        }
+
+        @Test
+        void should_containRefreshButton_when_animeIsOngoing() {
+            // Given
+            Anime anime = newOngoingAnime("Test Anime", "Тест");
+
+            // When
+            InlineKeyboardMarkup markup = builder.createInlineKeyboard(anime, 0);
+
+            // Then
+            List<InlineKeyboardRow> rows = markup.getKeyboard();
+            InlineKeyboardRow secondStatusRow = rows.get(2);
+            assertThat(secondStatusRow.get(0).getText()).isEqualTo("🔄");
+            assertThat(secondStatusRow.get(0).getCallbackData()).isEqualTo("REFRESH:1");
+        }
+
+        @Test
+        void should_notContainRewatchingStatusButton() {
+            // Given
+            Anime anime = newAnime("Test Anime", "Тест", 12, null, null);
+
+            // When
+            InlineKeyboardMarkup markup = builder.createInlineKeyboard(anime, 0);
+
+            // Then
+            List<InlineKeyboardButton> allButtons = markup.getKeyboard().stream()
+                    .flatMap(List::stream)
+                    .toList();
+            assertThat(allButtons)
+                    .noneMatch(btn -> "SET_WATCH_STATUS:1:REWATCHING".equals(btn.getCallbackData()));
         }
 
         @Test

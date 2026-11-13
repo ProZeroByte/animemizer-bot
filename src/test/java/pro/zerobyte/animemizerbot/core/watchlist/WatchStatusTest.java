@@ -61,18 +61,6 @@ class WatchStatusTest {
         }
 
         @Test
-        void should_returnFalse_when_rewatching() {
-            // Given
-            WatchStatus status = WatchStatus.REWATCHING;
-
-            // When
-            boolean result = status.isTerminal();
-
-            // Then
-            assertThat(result).isFalse();
-        }
-
-        @Test
         void should_returnFalse_when_onHold() {
             // Given
             WatchStatus status = WatchStatus.ON_HOLD;
@@ -93,18 +81,6 @@ class WatchStatusTest {
         void should_returnCompleted_when_watching() {
             // Given
             WatchStatus status = WatchStatus.WATCHING;
-
-            // When
-            WatchStatus result = status.onAllEpisodesWatched();
-
-            // Then
-            assertThat(result).isEqualTo(WatchStatus.COMPLETED);
-        }
-
-        @Test
-        void should_returnCompleted_when_rewatching() {
-            // Given
-            WatchStatus status = WatchStatus.REWATCHING;
 
             // When
             WatchStatus result = status.onAllEpisodesWatched();
@@ -147,47 +123,6 @@ class WatchStatusTest {
 
             // Then
             assertThat(result).isEqualTo(WatchStatus.ON_HOLD);
-        }
-    }
-
-    @Nested
-    @DisplayName("onRewatchStarted")
-    class OnRewatchStarted {
-
-        @Test
-        void should_returnRewatching_when_completed() {
-            // Given
-            WatchStatus status = WatchStatus.COMPLETED;
-
-            // When
-            WatchStatus result = status.onRewatchStarted();
-
-            // Then
-            assertThat(result).isEqualTo(WatchStatus.REWATCHING);
-        }
-
-        @Test
-        void should_returnSame_when_watching() {
-            // Given
-            WatchStatus status = WatchStatus.WATCHING;
-
-            // When
-            WatchStatus result = status.onRewatchStarted();
-
-            // Then
-            assertThat(result).isEqualTo(WatchStatus.WATCHING);
-        }
-
-        @Test
-        void should_returnSame_when_planned() {
-            // Given
-            WatchStatus status = WatchStatus.PLANNED;
-
-            // When
-            WatchStatus result = status.onRewatchStarted();
-
-            // Then
-            assertThat(result).isEqualTo(WatchStatus.PLANNED);
         }
     }
 }

@@ -23,6 +23,8 @@ public class AnimeService {
     private final WatchLinkResolver watchLinkResolver;
     private final Cache providerFailuresCache;
     private final Cache animeByIdsCache;
+    private final Cache animeByTitleCache;
+    private final Cache animeRefreshCooldownCache;
 
     public AnimeService(AnimeRepository repository,
                         ShikimoriConnector shikimoriConnector,
@@ -33,6 +35,8 @@ public class AnimeService {
         this.watchLinkResolver = watchLinkResolver;
         this.providerFailuresCache = cacheManager.getCache(CacheConfig.PROVIDER_FAILURES);
         this.animeByIdsCache = cacheManager.getCache(CacheConfig.ANIME_BY_ID);
+        this.animeByTitleCache = cacheManager.getCache(CacheConfig.ANIME_BY_TITLE);
+        this.animeRefreshCooldownCache = cacheManager.getCache(CacheConfig.ANIME_REFRESH_COOLDOWN);
     }
 
     public Anime save(Anime anime) {
@@ -62,6 +66,138 @@ public class AnimeService {
                 .or(() -> repository.findByNameIgnoreCase(name))
                 .or(() -> shikimoriConnector.findByTitle(name))
                 .map(this::updateIfRequired);
+    }
+
+    /**
+     * Force-syncs an anime with fresh Shikimori data, bypassing both the database copy
+     * and the {@code animeById} cache. Used by the refresh button for ongoing anime:
+     * newly released episodes are not visible through regular lookups because they read
+     * from the database or a cached Shikimori response.
+     *
+     * <p>Rate-limited by the {@code animeRefreshCooldown} cache (12h TTL): at most two
+     * live fetches per anime per day. While the cooldown is active the database copy is
+     * returned without touching Shikimori. The cooldown slot is claimed before the fetch
+     * so concurrent taps cannot bypass it, and released again when Shikimori fails so a
+     * retry is possible.
+     *
+     * <p>When the record is missing, the public ID is not a Shikimori one, or Shikimori
+     * is unreachable, returns the unchanged database copy (or {@link Optional#empty()}
+     * when there is no record at all).
+     */
+    public Optional<Anime> refreshById(Long animeId) {
+        Optional<Anime> existing = repository.findById(animeId);
+        if (existing.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Anime current = existing.get();
+        Optional<Long> shikimoriId = AnimeSource.SHIKIMORI.extractIdFromPublicId(current.publicId());
+        if (shikimoriId.isEmpty()) {
+            log.warn("Cannot refresh anime {}: publicId '{}' is not a Shikimori id", animeId, current.publicId());
+            return Optional.of(current);
+        }
+
+        if (isRefreshOnCooldown(animeId)) {
+            log.debug("Skipping refresh for anime {}: cooldown active", animeId);
+            return Optional.of(current);
+        }
+
+        // Claim the cooldown slot before fetching so concurrent taps cannot bypass the limit
+        claimRefreshCooldown(animeId);
+
+        // Bypass the 24h @Cacheable window so the connector performs a live Shikimori fetch
+        animeByIdsCache.evict(shikimoriId.get());
+
+        Optional<Anime> fresh = shikimoriConnector.findById(shikimoriId.get());
+        if (fresh.isEmpty()) {
+            releaseRefreshCooldown(animeId);
+            log.warn("Shikimori fetch failed for anime {} (shikimori id {}); keeping database copy",
+                    animeId, shikimoriId.get());
+            return Optional.of(current);
+        }
+
+        Anime merged = mergeFresh(current, fresh.get());
+        Anime saved = repository.save(merged);
+
+        evictTitleCache(current);
+        evictTitleCache(saved);
+
+        log.info("Refreshed anime '{}' (id {}): episodes {} -> {}, ongoing {}",
+                saved.russianName(), animeId, current.episodes(), saved.episodes(), saved.isOngoing());
+        return Optional.of(saved);
+    }
+
+    /**
+     * Returns true when the anime was successfully refreshed from Shikimori within the
+     * cooldown window (12h). Used by the refresh callback handler to do nothing while
+     * the limit is active.
+     */
+    public boolean isRefreshOnCooldown(Long animeId) {
+        if (animeRefreshCooldownCache == null || animeId == null) {
+            return false;
+        }
+        return animeRefreshCooldownCache.get(animeId, Boolean.class) != null;
+    }
+
+    private void claimRefreshCooldown(Long animeId) {
+        if (animeRefreshCooldownCache == null || animeId == null) {
+            return;
+        }
+        animeRefreshCooldownCache.put(animeId, Boolean.TRUE);
+    }
+
+    private void releaseRefreshCooldown(Long animeId) {
+        if (animeRefreshCooldownCache == null || animeId == null) {
+            return;
+        }
+        animeRefreshCooldownCache.evict(animeId);
+    }
+
+    /**
+     * Merges fresh Shikimori data into an existing database entity. Fresh values win for
+     * all Shikimori-sourced fields; the database {@code id} and the already resolved
+     * {@code watchUrl} are preserved (the mapper leaves both null).
+     */
+    private Anime mergeFresh(Anime current, Anime fresh) {
+        String cleanedDescription = fresh.description();
+        if (cleanedDescription != null && !cleanedDescription.isBlank()) {
+            cleanedDescription = TelegramMessageUtils.cleanDescription(cleanedDescription);
+        }
+        return new Anime(
+                current.id(),
+                fresh.publicId(),
+                fresh.prequelPublicId(),
+                fresh.sequelPublicId(),
+                fresh.name(),
+                fresh.russianName(),
+                fresh.englishName(),
+                cleanedDescription,
+                fresh.posterUrl(),
+                fresh.kind(),
+                fresh.isReleased(),
+                fresh.isAnons(),
+                fresh.isOngoing(),
+                fresh.episodes(),
+                fresh.episodesAired(),
+                fresh.airedOn(),
+                fresh.releasedOn(),
+                fresh.updatedAt(),
+                fresh.nextEpisodeAt(),
+                current.watchUrl()
+        );
+    }
+
+    private void evictTitleCache(Anime anime) {
+        evictTitleCacheKey(anime.name());
+        evictTitleCacheKey(anime.russianName());
+        evictTitleCacheKey(anime.englishName());
+    }
+
+    private void evictTitleCacheKey(String title) {
+        if (title == null || title.isBlank() || animeByTitleCache == null) {
+            return;
+        }
+        animeByTitleCache.evict(title.toLowerCase());
     }
 
     //TODO: Think about refactoring this method

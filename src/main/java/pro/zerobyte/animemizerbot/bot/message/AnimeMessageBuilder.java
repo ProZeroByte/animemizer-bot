@@ -11,12 +11,15 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Gatherers;
 
 @Component
 public class AnimeMessageBuilder {
+
+    private static final String REFRESH_BUTTON_TEXT = "🔄";
 
     public @NonNull String buildCaption(@NonNull Anime anime, Integer userWatchedEpisodes, @Nullable WatchStatus watchStatus) {
         String title = Objects.requireNonNullElse(anime.russianName(), anime.name());
@@ -68,7 +71,6 @@ public class AnimeMessageBuilder {
             case WATCHING -> "Смотрю 👀";
             case COMPLETED -> "Просмотрено ✅";
             case PLANNED -> "В планах 📋";
-            case REWATCHING -> "Пересматриваю 🔄";
             case ON_HOLD -> "Отложено ⏸";
             case DROPPED -> "Брошено ❌";
         };
@@ -133,17 +135,30 @@ public class AnimeMessageBuilder {
     }
 
     private List<InlineKeyboardRow> createStatusRows(Anime anime) {
-        WatchStatus[] statuses = WatchStatus.values();
-        return java.util.Arrays.stream(statuses)
+        InlineKeyboardButton refreshButton = InlineKeyboardButton.builder()
+                .text(REFRESH_BUTTON_TEXT)
+                .callbackData(AnimemizerBotCallback.REFRESH.toCallbackData(anime.id()))
+                .build();
+
+        List<InlineKeyboardRow> statusRows = Arrays.stream(WatchStatus.values())
+                .map(status -> InlineKeyboardButton.builder()
+                        .text(getWatchStatusEmoji(status))
+                        .callbackData(AnimemizerBotCallback.SET_WATCH_STATUS.toWatchStatusCallbackData(anime.id(), status.name()))
+                        .build())
                 .gather(Gatherers.windowFixed(3))
-                .map(window -> window.stream()
-                        .map(status -> InlineKeyboardButton.builder()
-                                .text(getWatchStatusEmoji(status))
-                                .callbackData(AnimemizerBotCallback.SET_WATCH_STATUS.toWatchStatusCallbackData(anime.id(), status.name()))
-                                .build())
-                        .toList())
+                .map(window -> window.stream().toList())
                 .map(InlineKeyboardRow::new)
                 .toList();
+
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(statusRows.getFirst());
+
+        InlineKeyboardRow secondRow = new InlineKeyboardRow(refreshButton);
+        if (statusRows.size() > 1) {
+            secondRow.addAll(statusRows.get(1));
+        }
+        rows.add(secondRow);
+        return rows;
     }
 
     private String getWatchStatusEmoji(WatchStatus status) {
@@ -151,7 +166,6 @@ public class AnimeMessageBuilder {
             case WATCHING -> "👀";
             case PLANNED -> "📋";
             case COMPLETED -> "✅";
-            case REWATCHING -> "🔄";
             case ON_HOLD -> "⏸";
             case DROPPED -> "❌";
         };

@@ -5,6 +5,7 @@ public enum AnimemizerBotCommand {
     HELP("/help", "Показать список доступных команд"),
     STOP("/stop", "Выключить бота"),
     LIST("/list", "Показать список аниме"),
+    WATCHING("/watching", "Показать аниме, которые я смотрю"),
     BATCH("/batch", "Найти несколько аниме через запятую");
 
     private final String command;

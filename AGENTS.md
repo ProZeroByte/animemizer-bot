@@ -53,6 +53,7 @@ Update → callback query?  → CallbackHandler chain (first canHandle wins)
 ## Patterns and integrations
 
 - **Placeholder-then-replace**: slow flows send a placeholder immediately, do async work on `applicationTaskExecutor`, then edit it (`EditMessageText` / `EditMessageCaption` / `EditMessageMedia`); if the placeholder send fails, return the result directly as a fallback.
+- **Anime links in text**: list messages embed deep links `https://t.me/<bot>?start=show_<shikimoriId>` (text links cannot fire callbacks). `StartCommandHandler` parses the `show_` payload and opens the card via `AnimeCardSender`; the `SHOW_ANIME` callback remains only for legacy buttons.
 - **Watch-link enrichment**: `AnimeService.enrichAndSaveIfRequired()` runs on every anime fetch, resolves one URL via `WatchLinkResolver`, and persists it. Failures are cached 24h in `providerFailures` to avoid repeat lookups.
 - `KinopoiskWatchLinkResolver` searches Kinopoisk first (rewrites `kinopoisk.ru` → `kinokino.red`), then AniLiberty; OpenRouter only *selects* among returned candidates and must never invent IDs or URLs. AniLiberty results carry the Shikimori ID as a matching signal.
 - Active integrations use `@HttpExchange` clients, not HTML scraping. Jsoup remains only in a manual Kinopoisk GraphQL test.

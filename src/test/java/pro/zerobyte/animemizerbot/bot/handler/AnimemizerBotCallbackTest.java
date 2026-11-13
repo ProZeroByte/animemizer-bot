@@ -122,6 +122,18 @@ class AnimemizerBotCallbackTest {
         }
 
         @Test
+        void should_extractId_when_showAnimeCallback() {
+            // Given
+            AnimemizerBotCallback callback = AnimemizerBotCallback.SHOW_ANIME;
+
+            // When
+            Long result = callback.extractId("SHOW_ANIME:77");
+
+            // Then
+            assertThat(result).isEqualTo(77L);
+        }
+
+        @Test
         void should_supportRefreshPrefix() {
             // Given
             AnimemizerBotCallback callback = AnimemizerBotCallback.REFRESH;
@@ -212,6 +224,20 @@ class AnimemizerBotCallbackTest {
 
             // Then
             assertThat(result).isEmpty();
+        }
+
+        @Test
+        void should_parseCompositeId_when_watchingPageCallback() {
+            // Given
+            String data = "WATCHING_PAGE:100:2";
+
+            // When
+            Optional<AnimemizerBotCallback.Payload> result = AnimemizerBotCallback.parse(data);
+
+            // Then
+            assertThat(result).isPresent();
+            assertThat(result.get().action()).isEqualTo(AnimemizerBotCallback.WATCHING_PAGE);
+            assertThat(result.get().id()).isEqualTo("100:2");
         }
     }
 

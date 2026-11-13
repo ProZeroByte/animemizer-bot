@@ -117,7 +117,7 @@ public class WatchingPageCallbackHandler implements CallbackHandler {
                     .chatId(chatId)
                     .messageId(messageId)
                     .text(text)
-                    .parseMode("Markdown")
+                    .parseMode("HTML")
                     .linkPreviewOptions(DISABLED_LINK_PREVIEW);
             if (keyboard != null) {
                 builder.replyMarkup(keyboard);

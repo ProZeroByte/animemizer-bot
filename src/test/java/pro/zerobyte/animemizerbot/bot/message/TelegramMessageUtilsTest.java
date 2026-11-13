@@ -146,6 +146,99 @@ class TelegramMessageUtilsTest {
     }
 
     @Nested
+    @DisplayName("escapeHtml")
+    class EscapeHtml {
+
+        @Test
+        void should_returnEmpty_when_textIsNull() {
+            // Given
+            String text = null;
+
+            // When
+            String result = TelegramMessageUtils.escapeHtml(text);
+
+            // Then
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        void should_returnEmpty_when_textIsBlank() {
+            // Given
+            String text = "   ";
+
+            // When
+            String result = TelegramMessageUtils.escapeHtml(text);
+
+            // Then
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        void should_notChange_when_plainText() {
+            // Given
+            String text = "Врата Штейна: начало — 24 серии";
+
+            // When
+            String result = TelegramMessageUtils.escapeHtml(text);
+
+            // Then
+            assertThat(result).isEqualTo(text);
+        }
+
+        @Test
+        void should_escapeAmpersand_when_textContainsIt() {
+            // Given
+            String text = "Ранобэ & экранизация";
+            String ampEntity = '&' + "amp;";
+
+            // When
+            String result = TelegramMessageUtils.escapeHtml(text);
+
+            // Then
+            assertThat(result).isEqualTo("Ранобэ " + ampEntity + " экранизация");
+        }
+
+        @Test
+        void should_escapeAngleBrackets_when_textContainsTagLikeText() {
+            // Given
+            String text = "Блич <ТВ-3> и продолжение";
+            String ltEntity = '&' + "lt;";
+            String gtEntity = '&' + "gt;";
+
+            // When
+            String result = TelegramMessageUtils.escapeHtml(text);
+
+            // Then
+            assertThat(result).isEqualTo("Блич " + ltEntity + "ТВ-3" + gtEntity + " и продолжение");
+        }
+
+        @Test
+        void should_doubleEscape_when_textContainsEntityLikeSequence() {
+            // Given — already escaped text must not pass through as markup
+            String ampEntity = '&' + "amp;";
+            String text = "A " + ampEntity + " B";
+
+            // When
+            String result = TelegramMessageUtils.escapeHtml(text);
+
+            // Then
+            assertThat(result).isEqualTo("A " + ampEntity + "amp; B");
+        }
+
+        @Test
+        void should_notEscapeQuotes_when_textContainsQuotedText() {
+            // Given — Telegram HTML does not require quotes to be escaped in text
+            String text = "Аниме \"Твоя апрельская ложь\"";
+
+            // When
+            String result = TelegramMessageUtils.escapeHtml(text);
+
+            // Then
+            assertThat(result).isEqualTo(text);
+        }
+    }
+
+    @Nested
     @DisplayName("cleanShikimoriMarkup")
     class CleanShikimoriMarkup {
 

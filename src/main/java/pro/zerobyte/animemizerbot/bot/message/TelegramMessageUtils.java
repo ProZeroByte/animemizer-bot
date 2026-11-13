@@ -24,9 +24,9 @@ public final class TelegramMessageUtils {
 
     /**
      * Cleans the text from Shikimori-specific markup.
-     * Converts "[character=7407]Наруто[/character]" into "Наруто".
-     * Removes Japanese characters inside brackets [うちは サスケ].
-     * Removes double brackets [[Хокагэ]] -> Хокагэ.
+     * Converts "[character=7407]ÐÐ°Ñ€ÑƒÑ‚Ð¾[/character]" into "ÐÐ°Ñ€ÑƒÑ‚Ð¾".
+     * Removes Japanese characters inside brackets [ã†ã¡ã¯ ã‚µã‚¹ã‚±].
+     * Removes double brackets [[Ð¥Ð¾ÐºÐ°Ð³Ñ]] -> Ð¥Ð¾ÐºÐ°Ð³Ñ.
      */
     public static @NonNull String cleanShikimoriMarkup(String text) {
         if (text == null || text.isBlank()) {
@@ -69,6 +69,19 @@ public final class TelegramMessageUtils {
 
 
     /**
+     * Escapes HTML special characters for Telegram HTML parse mode.
+     * Telegram HTML requires only {@code &}, {@code <} and {@code >} to be escaped in text.
+     */
+    public static @NonNull String escapeHtml(String text) {
+        if (text == null || text.isBlank()) {
+            return "";
+        }
+        return text.replace("&", '&' + "amp;")
+                .replace("<", '&' + "lt;")
+                .replace(">", '&' + "gt;");
+    }
+
+    /**
      * Truncates the text to the specified limit and appends an ellipsis if the text was truncated.
      */
     public static @NonNull String truncateText(String text, int limit) {
@@ -83,8 +96,8 @@ public final class TelegramMessageUtils {
 
     /**
      * Cleans a raw anime description for safe display in Telegram.
-     * Pipeline: strip URLs → clean Shikimori markup → strip generic BBCode tags →
-     * strip CJK characters → normalize whitespace → truncate to 300 chars.
+     * Pipeline: strip URLs â†’ clean Shikimori markup â†’ strip generic BBCode tags â†’
+     * strip CJK characters â†’ normalize whitespace â†’ truncate to 300 chars.
      */
     public static @NonNull String cleanDescription(String text) {
         if (text == null || text.isBlank()) {

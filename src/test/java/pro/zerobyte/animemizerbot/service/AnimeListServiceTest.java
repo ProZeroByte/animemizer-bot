@@ -186,7 +186,7 @@ class AnimeListServiceTest {
     class BuildWatchingPageText {
 
         @Test
-        void should_showProgress_when_totalEpisodesKnown() {
+        void should_buildTwoLineHtmlEntry_when_totalEpisodesKnown() {
             // Given
             List<AnimeListService.WatchingEntry> entries = List.of(
                     new AnimeListService.WatchingEntry(newAnime(10L, "Первое", "First", 24), 5));
@@ -195,8 +195,10 @@ class AnimeListServiceTest {
             String text = listService.buildWatchingPageText(entries, 0);
 
             // Then
-            assertThat(text).contains("[Первое](https://t.me/" + BOT_USERNAME + "?start=show_10)");
-            assertThat(text).contains("5/24");
+            assertThat(text).isEqualTo(
+                    "\uD83D\uDC40 <b>Смотрю (1):</b>\n\n"
+                            + "\u25AB\uFE0F <a href=\"https://t.me/" + BOT_USERNAME + "?start=show_10\">Первое</a>\n"
+                            + "    \u2514 Прогресс: <code>5 / 24</code>");
         }
 
         @Test
@@ -210,21 +212,26 @@ class AnimeListServiceTest {
             String text = listService.buildWatchingPageText(entries, 0);
 
             // Then
-            assertThat(text).contains("5/?");
-            assertThat(text).contains("3/?");
+            assertThat(text).contains("<code>5 / ?</code>");
+            assertThat(text).contains("<code>3 / ?</code>");
         }
 
         @Test
-        void should_escapeMarkdownInLinkText_when_titleHasSpecialCharacters() {
+        void should_escapeHtmlInLinkText_when_titleHasSpecialCharacters() {
             // Given
             List<AnimeListService.WatchingEntry> entries = List.of(
-                    new AnimeListService.WatchingEntry(newAnime(10L, "Первое [TV] *особое*", "First", 12), 5));
+                    new AnimeListService.WatchingEntry(newAnime(10L, "Первое <ТВ> & др", "First", 12), 5));
+            String ltEntity = '&' + "lt;";
+            String gtEntity = '&' + "gt;";
+            String ampEntity = '&' + "amp;";
+            String expectedTitle = "Первое " + ltEntity + "ТВ" + gtEntity + " " + ampEntity + " др";
 
             // When
             String text = listService.buildWatchingPageText(entries, 0);
 
             // Then
-            assertThat(text).contains("[Первое \\[TV\\] \\*особое\\*](https://t.me/" + BOT_USERNAME + "?start=show_10)");
+            assertThat(text).contains("<a href=\"https://t.me/" + BOT_USERNAME + "?start=show_10\">"
+                    + expectedTitle + "</a>");
         }
 
         @Test
@@ -238,8 +245,9 @@ class AnimeListServiceTest {
             String text = listService.buildWatchingPageText(entries, 0);
 
             // Then
-            assertThat(text).contains("1. Первое — 5/12");
-            assertThat(text).doesNotContain("](https://t.me/");
+            assertThat(text).contains("\u25AB\uFE0F Первое");
+            assertThat(text).contains("    \u2514 Прогресс: <code>5 / 12</code>");
+            assertThat(text).doesNotContain("<a href=");
         }
 
         @Test

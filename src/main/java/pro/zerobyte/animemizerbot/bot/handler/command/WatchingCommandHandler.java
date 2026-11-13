@@ -72,7 +72,7 @@ public class WatchingCommandHandler implements CommandHandler {
                     .chatId(chatId)
                     .messageId(placeholder.getMessageId())
                     .text(pageText)
-                    .parseMode("Markdown")
+                    .parseMode("HTML")
                     .linkPreviewOptions(DISABLED_LINK_PREVIEW);
             if (keyboard != null) {
                 builder.replyMarkup(keyboard);
@@ -97,7 +97,7 @@ public class WatchingCommandHandler implements CommandHandler {
         SendMessage.SendMessageBuilder<?, ?> builder = SendMessage.builder()
                 .chatId(chatId)
                 .text(pageText)
-                .parseMode("Markdown")
+                .parseMode("HTML")
                 .linkPreviewOptions(DISABLED_LINK_PREVIEW);
         if (keyboard != null) {
             builder.replyMarkup(keyboard);

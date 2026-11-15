@@ -29,6 +29,8 @@ public class AnimeListService {
 
     private static final Logger log = LoggerFactory.getLogger(AnimeListService.class);
     static final int PAGE_SIZE = 20;
+    private static final int WATCHING_TITLE_MAX_LENGTH = 32;
+    private static final int PROGRESS_BAR_LENGTH = 10;
 
     /**
      * An anime the user is currently watching, paired with the watched episode count.
@@ -159,37 +161,36 @@ public class AnimeListService {
     }
 
     /**
-     * Builds the /watching page text: a two-line block per anime — the linked title,
-     * then the watched/total progress on an indented line. Each title is an HTML link
-     * to the bot ({@code https://t.me/<bot>?start=show_<shikimoriId>}), so the message
-     * must be sent with parseMode "HTML" and link previews disabled.
+     * Builds the /watching page text as a two-line block per anime. Titles are bold
+     * and link to the anime card when a Shikimori id is available.
      */
     public String buildWatchingPageText(List<WatchingEntry> entries, int pageIndex) {
         if (entries.isEmpty()) {
             return "Вы пока ничего не смотрите \uD83D\uDC40";
         }
 
-        int totalPages = totalPages(entries.size());
         int fromIndex = pageIndex * PAGE_SIZE;
         int toIndex = Math.min(fromIndex + PAGE_SIZE, entries.size());
         List<WatchingEntry> pageItems = entries.subList(fromIndex, toIndex);
 
         StringBuilder sb = new StringBuilder();
         sb.append("\uD83D\uDC40 <b>Смотрю (").append(entries.size()).append("):</b>");
-        if (totalPages > 1) {
-            sb.append("\n\n\uD83D\uDCD6 Страница ").append(pageIndex + 1).append("/").append(totalPages);
-        }
         sb.append("\n\n");
 
         for (WatchingEntry entry : pageItems) {
             Anime anime = entry.anime();
-            String title = anime.russianName() != null ? anime.russianName() : anime.name();
-            String total = (anime.episodes() != null && anime.episodes() > 0)
-                    ? String.valueOf(anime.episodes())
-                    : "?";
-            sb.append("\u25AB\uFE0F ").append(buildTitleLink(anime, title)).append("\n");
-            sb.append("    \u2514 Прогресс: <code>").append(entry.watchedEpisodes())
-                    .append(" / ").append(total).append("</code>\n");
+            String title = truncateTitle(anime.russianName() != null ? anime.russianName() : anime.name());
+            sb.append("\u25AA ").append(buildTitleLink(anime, title)).append("\n");
+            sb.append("  <code>");
+            if (anime.episodes() == null || anime.episodes() <= 0) {
+                sb.append("\u25CB".repeat(PROGRESS_BAR_LENGTH))
+                        .append(" ").append(entry.watchedEpisodes()).append("/?</code>");
+            } else {
+                sb.append(buildProgressBar(entry.watchedEpisodes(), anime.episodes()))
+                        .append(" ").append(entry.watchedEpisodes()).append("/").append(anime.episodes())
+                        .append("</code>");
+            }
+            sb.append("\n");
         }
 
         return sb.toString().trim();
@@ -226,25 +227,44 @@ public class AnimeListService {
     }
 
     /**
-     * Renders the title as an HTML deep link opening the anime card, or as plain
+     * Renders a bold title as an HTML deep link opening the anime card, or as plain
      * escaped text when the anime has no Shikimori public id.
      */
     private String buildTitleLink(Anime anime, String title) {
         String escapedTitle = TelegramMessageUtils.escapeHtml(title);
         Optional<Long> shikimoriId = AnimeSource.SHIKIMORI.extractIdFromPublicId(anime.publicId());
         if (shikimoriId.isEmpty()) {
-            return escapedTitle;
+            return "<b>" + escapedTitle + "</b>";
         }
 
         String username = botProperties.username().startsWith("@")
                 ? botProperties.username().substring(1)
                 : botProperties.username();
         String url = "https://t.me/" + username + "?start=show_" + shikimoriId.get();
-        return "<a href=\"%s\">%s</a>".formatted(url, escapedTitle);
+        return "<a href=\"%s\"><b>%s</b></a>".formatted(url, escapedTitle);
+    }
+
+    private String truncateTitle(String title) {
+        int titleLength = title.codePointCount(0, title.length());
+        if (titleLength <= WATCHING_TITLE_MAX_LENGTH) {
+            return title;
+        }
+
+        int prefixEnd = title.offsetByCodePoints(0, WATCHING_TITLE_MAX_LENGTH - 3);
+        int wordBoundary = title.lastIndexOf(' ', prefixEnd);
+        String prefix = wordBoundary > 0
+                ? title.substring(0, wordBoundary)
+                : title.substring(0, prefixEnd);
+        return prefix.stripTrailing() + "...";
+    }
+
+    private String buildProgressBar(int watchedEpisodes, int totalEpisodes) {
+        int filledSegments = (int) Math.round((double) watchedEpisodes / totalEpisodes * PROGRESS_BAR_LENGTH);
+        filledSegments = Math.clamp(filledSegments, 0, PROGRESS_BAR_LENGTH);
+        return "\u25CF".repeat(filledSegments) + "\u25CB".repeat(PROGRESS_BAR_LENGTH - filledSegments);
     }
 
     private String displayName(Anime anime) {
         return (anime.russianName() != null ? anime.russianName() : anime.name()).toLowerCase();
     }
 }
-

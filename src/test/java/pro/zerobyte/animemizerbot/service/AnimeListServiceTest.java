@@ -197,8 +197,8 @@ class AnimeListServiceTest {
             // Then
             assertThat(text).isEqualTo(
                     "\uD83D\uDC40 <b>Смотрю (1):</b>\n\n"
-                            + "\u25AB\uFE0F <a href=\"https://t.me/" + BOT_USERNAME + "?start=show_10\">Первое</a>\n"
-                            + "    \u2514 Прогресс: <code>5 / 24</code>");
+                            + "\u25AA <a href=\"https://t.me/" + BOT_USERNAME + "?start=show_10\"><b>Первое</b></a>\n"
+                            + "  <code>\u25CF\u25CF\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB 5/24</code>");
         }
 
         @Test
@@ -212,8 +212,8 @@ class AnimeListServiceTest {
             String text = listService.buildWatchingPageText(entries, 0);
 
             // Then
-            assertThat(text).contains("<code>5 / ?</code>");
-            assertThat(text).contains("<code>3 / ?</code>");
+            assertThat(text).contains("  <code>\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB 5/?</code>");
+            assertThat(text).contains("  <code>\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB 3/?</code>");
         }
 
         @Test
@@ -231,7 +231,7 @@ class AnimeListServiceTest {
 
             // Then
             assertThat(text).contains("<a href=\"https://t.me/" + BOT_USERNAME + "?start=show_10\">"
-                    + expectedTitle + "</a>");
+                    + "<b>" + expectedTitle + "</b></a>");
         }
 
         @Test
@@ -245,9 +245,24 @@ class AnimeListServiceTest {
             String text = listService.buildWatchingPageText(entries, 0);
 
             // Then
-            assertThat(text).contains("\u25AB\uFE0F Первое");
-            assertThat(text).contains("    \u2514 Прогресс: <code>5 / 12</code>");
+            assertThat(text).contains("\u25AA <b>Первое</b>");
+            assertThat(text).contains("  <code>\u25CF\u25CF\u25CF\u25CF\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB 5/12</code>");
             assertThat(text).doesNotContain("<a href=");
+        }
+
+        @Test
+        void should_truncateLongTitleTo32Characters_andUseWordBoundary() {
+            // Given
+            String title = "Очень длинное название аниме, которое при просмотре";
+            List<AnimeListService.WatchingEntry> entries = List.of(
+                    new AnimeListService.WatchingEntry(newAnime(10L, title, "Title", 12), 3));
+
+            // When
+            String text = listService.buildWatchingPageText(entries, 0);
+
+            // Then
+            assertThat(text).contains("<b>Очень длинное название аниме,...</b>");
+            assertThat("Очень длинное название аниме,...").hasSizeLessThanOrEqualTo(32);
         }
 
         @Test
@@ -263,7 +278,7 @@ class AnimeListServiceTest {
         }
 
         @Test
-        void should_showPageIndicator_when_multiplePages() {
+        void should_keepHeaderAndShowOnlyCurrentPageEntries_when_multiplePages() {
             // Given
             List<AnimeListService.WatchingEntry> entries = new ArrayList<>();
             for (int i = 1; i <= 21; i++) {
@@ -276,8 +291,14 @@ class AnimeListServiceTest {
             String secondPage = listService.buildWatchingPageText(entries, 1);
 
             // Then
-            assertThat(firstPage).contains("Страница 1/2");
-            assertThat(secondPage).contains("Страница 2/2");
+            assertThat(firstPage).startsWith("\uD83D\uDC40 <b>Смотрю (21):</b>\n\n");
+            assertThat(secondPage).startsWith("\uD83D\uDC40 <b>Смотрю (21):</b>\n\n");
+            assertThat(firstPage).contains("\u25AA <a href=\"https://t.me/" + BOT_USERNAME
+                    + "?start=show_1\"><b>Аниме 1</b></a>");
+            assertThat(secondPage).contains("\u25AA <a href=\"https://t.me/" + BOT_USERNAME
+                    + "?start=show_21\"><b>Аниме 21</b></a>");
+            assertThat(firstPage).doesNotContain("Страница");
+            assertThat(secondPage).doesNotContain("Страница");
         }
     }
 

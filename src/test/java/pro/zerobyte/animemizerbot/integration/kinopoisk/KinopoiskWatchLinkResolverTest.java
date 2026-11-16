@@ -77,7 +77,12 @@ class KinopoiskWatchLinkResolverTest {
 
     private ChatCompletionResponse selection(String content) {
         return new ChatCompletionResponse(List.of(
-                new ChatCompletionResponse.Choice(new ChatCompletionResponse.Message(content))));
+                new ChatCompletionResponse.Choice("stop", new ChatCompletionResponse.Message(content))));
+    }
+
+    private ChatCompletionResponse truncatedSelection() {
+        return new ChatCompletionResponse(List.of(
+                new ChatCompletionResponse.Choice("length", new ChatCompletionResponse.Message(null))));
     }
 
     @Nested
@@ -279,6 +284,57 @@ class KinopoiskWatchLinkResolverTest {
             when(kinopoiskClient.searchByKeyword("Наруто"))
                     .thenReturn(kinopoiskResponse(kinopoiskFilm(301, "Наруто", "FILM", "2002")));
             when(openRouterClient.complete(any(ChatCompletionRequest.class))).thenReturn(selection("NONE"));
+            when(anilibertyClient.searchReleases("Наруто")).thenReturn(List.of());
+
+            // When
+            Optional<String> result = resolver.resolveWatchUrl(anime);
+
+            // Then
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        void should_useTheOnlyKinopoiskCandidate_when_reasoningConsumesTheWholeTokenBudget() {
+            // Given
+            Anime anime = newAnime("Gekijo-ban Jujutsu Kaisen Kaigyoku / Gyokusetsu",
+                    "Магическая битва: Пагубный талант/Таланты умирают молодыми", "shikimori_59654");
+            when(kinopoiskClient.searchByKeyword("Магическая битва: Пагубный талант/Таланты умирают молодыми"))
+                    .thenReturn(kinopoiskResponse(kinopoiskFilm(8006648, null, "FILM", "2025")));
+            when(openRouterClient.complete(any(ChatCompletionRequest.class))).thenReturn(truncatedSelection());
+
+            // When
+            Optional<String> result = resolver.resolveWatchUrl(anime);
+
+            // Then
+            assertThat(result).contains("https://www.kinokino.red/film/8006648/");
+        }
+
+        @Test
+        void should_requestEnoughTokensForReasoningModels_when_selectingCandidate() {
+            // Given
+            Anime anime = newAnime("Naruto", "Наруто", "shikimori_20");
+            when(kinopoiskClient.searchByKeyword("Наруто"))
+                    .thenReturn(kinopoiskResponse(kinopoiskFilm(301, "Наруто", "FILM", "2002")));
+            when(openRouterClient.complete(any(ChatCompletionRequest.class))).thenReturn(selection("301"));
+
+            // When
+            resolver.resolveWatchUrl(anime);
+
+            // Then
+            ArgumentCaptor<ChatCompletionRequest> captor = ArgumentCaptor.forClass(ChatCompletionRequest.class);
+            verify(openRouterClient).complete(captor.capture());
+            assertThat(captor.getValue().maxTokens()).isGreaterThanOrEqualTo(512);
+        }
+
+        @Test
+        void should_notGuess_when_OpenRouterFailsAndKinopoiskCandidatesAreAmbiguous() {
+            // Given
+            Anime anime = newAnime("Naruto", "Наруто", "shikimori_20");
+            when(kinopoiskClient.searchByKeyword("Наруто"))
+                    .thenReturn(kinopoiskResponse(
+                            kinopoiskFilm(301, "Наруто", "FILM", "2002"),
+                            kinopoiskFilm(283290, "Наруто: Ураганные хроники", "TV_SERIES", "2007")));
+            when(openRouterClient.complete(any(ChatCompletionRequest.class))).thenReturn(truncatedSelection());
             when(anilibertyClient.searchReleases("Наруто")).thenReturn(List.of());
 
             // When

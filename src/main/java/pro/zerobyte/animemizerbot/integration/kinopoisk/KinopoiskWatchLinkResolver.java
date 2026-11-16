@@ -44,6 +44,11 @@ public class KinopoiskWatchLinkResolver implements WatchLinkResolver {
     private static final String KINOKINO_DOMAIN = "kinokino.red";
     private static final String ANILIBERTY_RELEASE_PATH = "/anime/releases/release/%s/episodes";
     private static final String NONE = "NONE";
+    /**
+     * Reasoning models spend completion tokens on hidden reasoning before writing the answer, so a tiny
+     * budget makes the reply end with {@code finish_reason=length} and a {@code null} content.
+     */
+    private static final int MAX_SELECTION_TOKENS = 1024;
     private static final Pattern SEASON_SUFFIX = Pattern.compile(
             "(?iu)^(.+?)(?:\\s*[:\\-]\\s*|\\s+)(?:(?:сезон|season)\\s*(\\d+)|(\\d+)(?:-й|-я|st|nd|rd|th)?(?:\\s+(?:сезон|season))?)\\s*$");
 
@@ -103,7 +108,8 @@ public class KinopoiskWatchLinkResolver implements WatchLinkResolver {
     private Optional<String> resolveKinopoisk(String title) {
         List<KinopoiskSearchResponse.KinopoiskFilm> films = searchKinopoisk(title);
         if (!films.isEmpty()) {
-            Optional<Long> selectedId = selectId(title, buildKinopoiskPrompt(title, films), KINOPOISK_SYSTEM_PROMPT);
+            Optional<Long> selectedId = selectId(title, buildKinopoiskPrompt(title, films), KINOPOISK_SYSTEM_PROMPT,
+                    films.stream().map(KinopoiskSearchResponse.KinopoiskFilm::filmId).toList());
             Optional<String> selectedUrl = films.stream()
                     .filter(film -> selectedId.isPresent() && film.filmId().equals(selectedId.get()))
                     .findFirst()
@@ -194,7 +200,8 @@ public class KinopoiskWatchLinkResolver implements WatchLinkResolver {
         }
 
         Long shikimoriId = AnimeSource.SHIKIMORI.extractIdFromPublicId(anime.publicId()).orElse(null);
-        Optional<Long> selectedId = selectId(title, buildAnilibertyPrompt(title, shikimoriId, releases), ANILIBERTY_SYSTEM_PROMPT);
+        Optional<Long> selectedId = selectId(title, buildAnilibertyPrompt(title, shikimoriId, releases), ANILIBERTY_SYSTEM_PROMPT,
+                releases.stream().map(AnilibertyReleaseDto::id).toList());
         Optional<AnilibertyReleaseDto> exactShikimoriMatch = releases.stream()
                 .filter(release -> release.shikimori() != null
                         && release.shikimori().id() != null
@@ -232,7 +239,7 @@ public class KinopoiskWatchLinkResolver implements WatchLinkResolver {
         }
     }
 
-    private Optional<Long> selectId(String title, String userPrompt, String systemPrompt) {
+    private Optional<Long> selectId(String title, String userPrompt, String systemPrompt, List<Long> candidateIds) {
         try {
             String model = openRouterProperties.resolvedModel();
             ChatCompletionRequest request = new ChatCompletionRequest(
@@ -242,37 +249,57 @@ public class KinopoiskWatchLinkResolver implements WatchLinkResolver {
                             new ChatCompletionRequest.Message("user", userPrompt)
                     ),
                     0.0,
-                    32
+                    MAX_SELECTION_TOKENS
             );
             log.debug("OpenRouter request: model='{}' for anime '{}'", model, title);
             ChatCompletionResponse response = openRouterClient.complete(request);
             if (response == null || response.choices() == null || response.choices().isEmpty()
                     || response.choices().getFirst() == null
-                    || response.choices().getFirst().message() == null
-                    || response.choices().getFirst().message().content() == null) {
+                    || response.choices().getFirst().message() == null) {
                 log.warn("OpenRouter returned an empty or malformed response for anime '{}'", title);
+                return soleCandidate(title, candidateIds);
+            }
+
+            String content = response.choices().getFirst().message().content();
+            if (content == null || content.isBlank()) {
+                log.warn("OpenRouter returned no content for anime '{}' (finishReason='{}') — the reply was cut off "
+                                + "before any text, usually because reasoning consumed the whole token budget",
+                        title, response.choices().getFirst().finishReason());
+                return soleCandidate(title, candidateIds);
+            }
+
+            String selection = content.strip();
+            log.debug("OpenRouter raw selection for anime '{}': '{}'", title, selection);
+            if (selection.equalsIgnoreCase(NONE)) {
                 return Optional.empty();
             }
 
-            String content = response.choices().getFirst().message().content().trim();
-            log.debug("OpenRouter raw selection for anime '{}': '{}'", title, content);
-            if (content.equalsIgnoreCase(NONE)) {
-                return Optional.empty();
-            }
-
-            String digits = content.replaceAll("[^0-9]", "");
+            String digits = selection.replaceAll("[^0-9]", "");
             if (digits.isEmpty()) {
-                log.warn("OpenRouter selection '{}' for anime '{}' contains no numeric id — discarding", content, title);
-                return Optional.empty();
+                log.warn("OpenRouter selection '{}' for anime '{}' contains no numeric id — discarding", selection, title);
+                return soleCandidate(title, candidateIds);
             }
             return Optional.of(Long.valueOf(digits));
         } catch (RestClientException e) {
             log.warn("OpenRouter selection failed for anime '{}': {} — {}", title, e.getClass().getSimpleName(), e.getMessage());
-            return Optional.empty();
+            return soleCandidate(title, candidateIds);
         } catch (NumberFormatException e) {
             log.warn("OpenRouter selection for anime '{}' produced an unparsable id: {}", title, e.getMessage());
+            return soleCandidate(title, candidateIds);
+        }
+    }
+
+    /**
+     * Falls back to the single search result when OpenRouter cannot answer: the id still comes from the
+     * provider response, so no candidate is ever invented, and an ambiguous list stays unresolved.
+     */
+    private Optional<Long> soleCandidate(String title, List<Long> candidateIds) {
+        if (candidateIds.size() != 1) {
             return Optional.empty();
         }
+        log.info("Using the only candidate {} for anime '{}' because OpenRouter gave no usable selection",
+                candidateIds.getFirst(), title);
+        return Optional.of(candidateIds.getFirst());
     }
 
     private String buildKinopoiskPrompt(String title, List<KinopoiskSearchResponse.KinopoiskFilm> films) {

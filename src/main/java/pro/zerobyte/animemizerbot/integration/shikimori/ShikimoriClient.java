@@ -15,6 +15,9 @@ public interface ShikimoriClient {
     @GetExchange("/api/animes")
     List<ShikimoriAnimeDto> searchAnime(@RequestParam("search") String title, @RequestParam("limit") int limit);
 
+    @GetExchange("/api/animes?order=random&limit=1")
+    List<ShikimoriAnimeDto> getRandomAnime();
+
     @GetExchange("/api/animes/{id}")
     ShikimoriAnimeDto getAnimeDetails(@PathVariable long id);
 

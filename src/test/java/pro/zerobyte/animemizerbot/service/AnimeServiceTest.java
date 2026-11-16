@@ -440,4 +440,38 @@ class AnimeServiceTest {
             verify(animeByTitleCache).evict("новое имя");
         }
     }
+
+    @Nested
+    @DisplayName("findRandom")
+    class FindRandom {
+
+        @Test
+        void should_returnAndSaveAnime_when_shikimoriReturnsRandomAnime() {
+            // Given
+            Anime randomAnime = newAnime(null, PUBLIC_ID, ANIME_NAME, RUSSIAN_NAME);
+            when(shikimoriConnector.findRandom()).thenReturn(Optional.of(randomAnime));
+            when(repository.findByPublicId(PUBLIC_ID)).thenReturn(Optional.empty());
+
+            // When
+            Optional<Anime> result = animeService.findRandom();
+
+            // Then
+            assertThat(result).isPresent();
+            assertThat(result.get().name()).isEqualTo(ANIME_NAME);
+            verify(repository).save(any(Anime.class));
+        }
+
+        @Test
+        void should_returnEmpty_when_noRandomAnimeFound() {
+            // Given
+            when(shikimoriConnector.findRandom()).thenReturn(Optional.empty());
+
+            // When
+            Optional<Anime> result = animeService.findRandom();
+
+            // Then
+            assertThat(result).isEmpty();
+            verifyNoInteractions(repository);
+        }
+    }
 }

@@ -69,6 +69,15 @@ public class AnimeService {
     }
 
     /**
+     * Fetches a random anime from Shikimori and persists it (with watch-link enrichment),
+     * so the card can be opened by its internal id afterwards.
+     */
+    public Optional<Anime> findRandom() {
+        return shikimoriConnector.findRandom()
+                .map(this::enrichAndSaveIfRequired);
+    }
+
+    /**
      * Force-syncs an anime with fresh Shikimori data, bypassing both the database copy
      * and the {@code animeById} cache. Used by the refresh button for ongoing anime:
      * newly released episodes are not visible through regular lookups because they read

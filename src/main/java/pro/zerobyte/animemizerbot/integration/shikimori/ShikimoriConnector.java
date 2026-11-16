@@ -66,6 +66,26 @@ public class ShikimoriConnector {
         }
     }
 
+    /**
+     * Picks a random anime via Shikimori's {@code order=random} search and resolves
+     * its full details. Intentionally not cached: every call should return a new pick.
+     */
+    public Optional<Anime> findRandom() {
+        try {
+            List<ShikimoriAnimeDto> randomResults = shikimoriClient.getRandomAnime();
+            if (randomResults == null || randomResults.isEmpty()) {
+                return Optional.empty();
+            }
+            return findById(randomResults.getFirst().id());
+        } catch (CompletionException e) {
+            log.error("Failed to fetch random anime: {}", e.getMessage());
+            return Optional.empty();
+        } catch (HttpClientErrorException e) {
+            log.error("HTTP error during random anime fetch: {} {}", e.getStatusCode(), e.getMessage());
+            return Optional.empty();
+        }
+    }
+
     private CompletableFuture<ShikimoriAnimeDto> fetchDetailsAsync(Long animeId) {
         return CompletableFuture.supplyAsync(() -> {
             try {

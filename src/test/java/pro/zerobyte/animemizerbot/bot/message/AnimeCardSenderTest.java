@@ -221,4 +221,49 @@ class AnimeCardSenderTest {
             verify(telegramClient).execute(any(DeleteMessage.class));
         }
     }
+
+    @Nested
+    @DisplayName("sendRandomCard")
+    class SendRandomCard {
+
+        @Test
+        void should_fetchRandomAnime_andSendCard() throws Exception {
+            // Given
+            AnimeCardSender sender = createSender();
+            Anime anime = buildAnime(42L, "http://poster.url");
+
+            Message placeholder = buildPlaceholder();
+            when(telegramClient.execute(any(SendMessage.class))).thenReturn(placeholder);
+            when(animeService.findRandom()).thenReturn(Optional.of(anime));
+            when(watchlistService.getWatchlist(USER_ID, 42L)).thenReturn(Optional.empty());
+            when(messageBuilder.buildCaption(anime, 0, null)).thenReturn("caption");
+            when(messageBuilder.createInlineKeyboard(anime, 0)).thenReturn(mock(InlineKeyboardMarkup.class));
+
+            // When
+            sender.sendRandomCard(CHAT_ID, USER_ID);
+
+            // Then
+            verify(animeService).findRandom();
+            verify(telegramClient).execute(any(SendPhoto.class));
+            verify(telegramClient).execute(any(DeleteMessage.class));
+        }
+
+        @Test
+        void should_showNotFound_when_noRandomAnime() throws Exception {
+            // Given
+            AnimeCardSender sender = createSender();
+
+            Message placeholder = buildPlaceholder();
+            when(telegramClient.execute(any(SendMessage.class))).thenReturn(placeholder);
+            when(animeService.findRandom()).thenReturn(Optional.empty());
+
+            // When
+            sender.sendRandomCard(CHAT_ID, USER_ID);
+
+            // Then
+            ArgumentCaptor<EditMessageText> captor = ArgumentCaptor.forClass(EditMessageText.class);
+            verify(telegramClient).execute(captor.capture());
+            assertThat(captor.getValue().getText()).isEqualTo("Аниме не найдено");
+        }
+    }
 }

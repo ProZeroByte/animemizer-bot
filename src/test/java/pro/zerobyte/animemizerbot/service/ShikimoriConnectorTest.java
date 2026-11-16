@@ -115,4 +115,52 @@ class ShikimoriConnectorTest {
             assertThat(result).isPresent();
         }
     }
+
+    @Nested
+    @DisplayName("findRandom")
+    class FindRandom {
+
+        @Test
+        void should_returnAnime_when_randomAnimeReturned() {
+            // Given
+            ShikimoriAnimeDto dto = mock(ShikimoriAnimeDto.class);
+            when(dto.id()).thenReturn(7L);
+            when(shikimoriClient.getRandomAnime()).thenReturn(singletonList(dto));
+            when(shikimoriClient.getAnimeDetails(anyInt())).thenReturn(dto);
+            when(shikimoriClient.getRelatedAnimes(anyInt())).thenReturn(emptyMutableList());
+
+            Anime expectedAnime = mock(Anime.class);
+            when(shikimoriMapper.toEntity(any(), any())).thenReturn(expectedAnime);
+
+            // When
+            Optional<Anime> result = connector.findRandom();
+
+            // Then
+            assertThat(result).containsSame(expectedAnime);
+        }
+
+        @Test
+        void should_returnEmpty_when_randomLookupReturnsNoAnime() {
+            // Given
+            when(shikimoriClient.getRandomAnime()).thenReturn(emptyMutableList());
+
+            // When
+            Optional<Anime> result = connector.findRandom();
+
+            // Then
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        void should_returnEmpty_when_clientThrowsException() {
+            // Given
+            when(shikimoriClient.getRandomAnime()).thenThrow(mock(HttpClientErrorException.class));
+
+            // When
+            Optional<Anime> result = connector.findRandom();
+
+            // Then
+            assertThat(result).isEmpty();
+        }
+    }
 }

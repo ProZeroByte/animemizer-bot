@@ -2,6 +2,7 @@ package pro.zerobyte.animemizerbot.bot.handler;
 
 public enum AnimemizerBotCommand {
     START("/start", "Запустить бота и показать приветствие"),
+    RANDOM("/random", "Показать случайное аниме"),
     WATCHING("/watching", "Показать аниме, которые я смотрю"),
     HELP("/help", "Показать список доступных команд"),
     STOP("/stop", "Выключить бота"),

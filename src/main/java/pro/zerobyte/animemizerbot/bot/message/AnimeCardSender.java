@@ -37,6 +37,7 @@ import java.util.function.Supplier;
 public class AnimeCardSender {
     private static final Logger log = LoggerFactory.getLogger(AnimeCardSender.class);
     private static final String CARD_PLACEHOLDER = "\uD83D\uDD0D Открываю карточку...";
+    private static final String RANDOM_CARD_PLACEHOLDER = "\uD83C\uDFB2 Ищу случайное аниме...";
     private static final String NOT_FOUND_TEXT = "Аниме не найдено";
     private static final String ERROR_TEXT = "Произошла ошибка при открытии карточки. Пожалуйста, попробуйте позже.";
 
@@ -62,7 +63,7 @@ public class AnimeCardSender {
      * Opens the card for an anime by its internal database id.
      */
     public void sendCardByInternalId(long chatId, long telegramUserId, Long animeId) {
-        sendCard(chatId, telegramUserId, () -> animeService.findById(animeId));
+        sendCard(chatId, telegramUserId, CARD_PLACEHOLDER, () -> animeService.findById(animeId));
     }
 
     /**
@@ -70,16 +71,23 @@ public class AnimeCardSender {
      * fetching fresh data from Shikimori when the record is not in the database.
      */
     public void sendCardByPublicId(long chatId, long telegramUserId, String publicId) {
-        sendCard(chatId, telegramUserId, () -> animeService.findByPublicIdOrFetch(publicId));
+        sendCard(chatId, telegramUserId, CARD_PLACEHOLDER, () -> animeService.findByPublicIdOrFetch(publicId));
     }
 
-    private void sendCard(long chatId, long telegramUserId, Supplier<Optional<Anime>> fetch) {
+    /**
+     * Opens the card for a random anime picked by Shikimori.
+     */
+    public void sendRandomCard(long chatId, long telegramUserId) {
+        sendCard(chatId, telegramUserId, RANDOM_CARD_PLACEHOLDER, animeService::findRandom);
+    }
+
+    private void sendCard(long chatId, long telegramUserId, String placeholderText, Supplier<Optional<Anime>> fetch) {
         // Send placeholder message immediately
         Message placeholder = null;
         try {
             placeholder = telegramClient.execute(SendMessage.builder()
                     .chatId(chatId)
-                    .text(CARD_PLACEHOLDER)
+                    .text(placeholderText)
                     .build());
         } catch (TelegramApiException e) {
             log.error("Failed to send card placeholder for chatId={}: {}", chatId, e.getMessage());

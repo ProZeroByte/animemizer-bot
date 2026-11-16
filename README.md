@@ -33,6 +33,7 @@ The bot operates in two modes: **long polling** (development) and **webhook** (p
 ## Features
 
 - **Anime Search** — type any anime title in the chat to find it via Shikimori's API, with results displayed as an interactive card with poster, description, and inline keyboard
+- **Random Anime** — `/random` picks a random anime via Shikimori (`order=random`) and opens its card
 - **Batch Search** — search for multiple anime titles at once with `/batch`, separated by commas (up to 300 titles)
 - **Episode Tracking** — increment or decrement watched episodes directly from the anime card via `+1` / `-1` buttons
 - **Watch Status Management** — set status to Watching, Planned, Completed, On Hold, or Dropped via inline buttons
@@ -48,6 +49,7 @@ The bot operates in two modes: **long polling** (development) and **webhook** (p
 | Command | Description |
 |---------|-------------|
 | `/start` | Start the bot and show a welcome message. Registers the user if new. |
+| `/random` | Pick a random anime via Shikimori and open its card. |
 | `/help` | Display all available commands with descriptions. |
 | `/stop` | Show a farewell message. |
 | `/list` | Show your personal anime watchlist as a paginated list (20 items per page) with navigation buttons. |
@@ -237,7 +239,7 @@ animemizer-bot/
 │   │   ├── processor/
 │   │   │   └── BotUpdateProcessor          # Update routing (callback → text → command)
 │   │   ├── handler/
-│   │   │   ├── AnimemizerBotCommand        # Command enum (/start, /help, /stop, /list, /batch)
+│   │   │   ├── AnimemizerBotCommand        # Command enum (/start, /random, /help, /stop, /list, /batch)
 │   │   │   ├── AnimemizerBotCallback       # Callback enum + data parsing
 │   │   │   ├── CommandHandler              # Interface for /command handlers
 │   │   │   ├── CallbackHandler             # Interface for inline button handlers

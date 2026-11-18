@@ -40,6 +40,7 @@ The bot operates in two modes: **long polling** (development) and **webhook** (p
 - **Prequel/Sequel Navigation** — navigate anime franchise chains with directional buttons
 - **Watchlist** — view all tracked anime in a paginated list sorted alphabetically
 - **Watching List** — `/watching` shows anime with status *Watching* with watched/total episode progress; each title is a link that opens the full anime card (via a `/start show_<id>` deep link)
+- **Planned List** — `/planned` shows anime with status *Planned* in the same format as `/watching`
 - **On Hold List** — `/onhold` shows anime with status *On Hold* in the same format as `/watching`
 - **Watch Link** — a single "Смотреть" button shown when a link is found via Kinopoisk or AniLiberty
 - **Watch Link Enrichment** — anime records are automatically enriched with a watch link on first access
@@ -55,6 +56,7 @@ The bot operates in two modes: **long polling** (development) and **webhook** (p
 | `/stop` | Show a farewell message. |
 | `/list` | Show your personal anime watchlist as a paginated list (20 items per page) with navigation buttons. |
 | `/watching` | Show anime you are currently watching with watched/total episode progress. Tap a title link to open the full anime card. |
+| `/planned` | Show anime you plan to watch with watched/total episode progress. Tap a title link to open the full anime card. |
 | `/onhold` | Show anime you have put on hold with watched/total episode progress. Tap a title link to open the full anime card. |
 | `/batch` | Batch-search multiple anime titles. Pass comma-separated titles after the command. |
 

@@ -231,6 +231,7 @@ public class AnimeListService {
     private String statusIcon(WatchStatus status) {
         return switch (status) {
             case WATCHING -> "\uD83D\uDC40";
+            case PLANNED -> "\uD83D\uDCCB";
             case ON_HOLD -> "\u23F8\uFE0F";
             default -> "\uD83D\uDCCB";
         };
@@ -239,6 +240,7 @@ public class AnimeListService {
     private String emptyStatusText(WatchStatus status) {
         return switch (status) {
             case WATCHING -> "Вы пока ничего не смотрите \uD83D\uDC40";
+            case PLANNED -> "Вы пока ничего не запланировали \uD83D\uDCCB";
             case ON_HOLD -> "Вы пока ничего не отложили \u23F8\uFE0F";
             default -> "В этом списке пока ничего нет.";
         };

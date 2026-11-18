@@ -372,6 +372,34 @@ class AnimeListServiceTest {
             // Then
             assertThat(text).contains("Вы пока ничего не отложили");
         }
+
+        @Test
+        void should_buildPlannedHeader_when_statusIsPlanned() {
+            // Given
+            List<AnimeListService.WatchingEntry> entries = List.of(
+                    new AnimeListService.WatchingEntry(newAnime(14L, "Запланированное", "Planned", 12), 0));
+
+            // When
+            String text = listService.buildStatusPageText(entries, 0, WatchStatus.PLANNED);
+
+            // Then
+            assertThat(text).startsWith("\uD83D\uDCCB <b>В планах (1):</b>\n\n");
+            assertThat(text).contains("\u25AA <a href=\"https://t.me/" + BOT_USERNAME
+                    + "?start=show_14\"><b>Запланированное</b></a>");
+            assertThat(text).contains("  <code>\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB 0/12</code>");
+        }
+
+        @Test
+        void should_showPlannedEmptyMessage_when_noEntries() {
+            // Given
+            List<AnimeListService.WatchingEntry> entries = List.of();
+
+            // When
+            String text = listService.buildStatusPageText(entries, 0, WatchStatus.PLANNED);
+
+            // Then
+            assertThat(text).contains("Вы пока ничего не запланировали");
+        }
     }
 
     @Nested

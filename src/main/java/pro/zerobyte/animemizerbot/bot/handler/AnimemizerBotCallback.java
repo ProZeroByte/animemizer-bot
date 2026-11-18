@@ -14,6 +14,7 @@ public enum AnimemizerBotCallback {
     LIST_PAGE("LIST_PAGE"),
     REFRESH("REFRESH"),
     WATCHING_PAGE("WATCHING_PAGE"),
+    PLANNED_PAGE("PLANNED_PAGE"),
     ON_HOLD_PAGE("ON_HOLD_PAGE"),
     SHOW_ANIME("SHOW_ANIME");
 

@@ -239,6 +239,20 @@ class AnimemizerBotCallbackTest {
             assertThat(result.get().action()).isEqualTo(AnimemizerBotCallback.WATCHING_PAGE);
             assertThat(result.get().id()).isEqualTo("100:2");
         }
+
+        @Test
+        void should_parseCompositeId_when_onHoldPageCallback() {
+            // Given
+            String data = "ON_HOLD_PAGE:100:2";
+
+            // When
+            Optional<AnimemizerBotCallback.Payload> result = AnimemizerBotCallback.parse(data);
+
+            // Then
+            assertThat(result).isPresent();
+            assertThat(result.get().action()).isEqualTo(AnimemizerBotCallback.ON_HOLD_PAGE);
+            assertThat(result.get().id()).isEqualTo("100:2");
+        }
     }
 
     @Nested

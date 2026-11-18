@@ -15,9 +15,11 @@ import org.telegram.telegrambots.meta.api.objects.User;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
+import pro.zerobyte.animemizerbot.bot.handler.AnimemizerBotCallback;
 import pro.zerobyte.animemizerbot.core.anime.Anime;
 import pro.zerobyte.animemizerbot.core.anime.AnimeListService;
 import pro.zerobyte.animemizerbot.core.anime.AnimeService;
+import pro.zerobyte.animemizerbot.core.watchlist.WatchStatus;
 
 import java.util.List;
 
@@ -104,10 +106,10 @@ class WatchingPageCallbackHandlerTest {
             Update update = buildCallbackUpdate("WATCHING_PAGE:100:1", 100L);
             List<AnimeListService.WatchingEntry> entries = entries(25);
 
-            when(animeListService.fetchWatchingEntries(100L)).thenReturn(entries);
+            when(animeListService.fetchEntries(100L, WatchStatus.WATCHING)).thenReturn(entries);
             when(animeListService.totalPages(25)).thenReturn(2);
-            when(animeListService.buildWatchingPageText(entries, 1)).thenReturn("страница 2");
-            when(animeListService.buildWatchingPageKeyboard(100L, 1, 2))
+            when(animeListService.buildStatusPageText(entries, 1, WatchStatus.WATCHING)).thenReturn("страница 2");
+            when(animeListService.buildStatusPageKeyboard(100L, 1, 2, AnimemizerBotCallback.WATCHING_PAGE))
                     .thenReturn(mock(InlineKeyboardMarkup.class));
 
             // When
@@ -116,7 +118,7 @@ class WatchingPageCallbackHandlerTest {
             // Then
             assertThat(result).isNull();
             verify(telegramClient, atLeastOnce()).execute(any(EditMessageText.class));
-            verify(animeListService).buildWatchingPageText(entries, 1);
+            verify(animeListService).buildStatusPageText(entries, 1, WatchStatus.WATCHING);
         }
 
         @Test
@@ -125,8 +127,10 @@ class WatchingPageCallbackHandlerTest {
             WatchingPageCallbackHandler handler = new WatchingPageCallbackHandler(animeListService, telegramClient);
             Update update = buildCallbackUpdate("WATCHING_PAGE:100:0", 100L);
 
-            when(animeListService.fetchWatchingEntries(100L)).thenReturn(List.of());
+            when(animeListService.fetchEntries(100L, WatchStatus.WATCHING)).thenReturn(List.of());
             when(animeListService.totalPages(0)).thenReturn(0);
+            when(animeListService.buildStatusPageText(List.of(), 0, WatchStatus.WATCHING))
+                    .thenReturn("Вы пока ничего не смотрите");
 
             // When
             PartialBotApiMethod<?> result = handler.handle(update);
@@ -143,10 +147,10 @@ class WatchingPageCallbackHandlerTest {
             Update update = buildCallbackUpdate("WATCHING_PAGE:100:5", 100L);
             List<AnimeListService.WatchingEntry> entries = entries(3);
 
-            when(animeListService.fetchWatchingEntries(100L)).thenReturn(entries);
+            when(animeListService.fetchEntries(100L, WatchStatus.WATCHING)).thenReturn(entries);
             when(animeListService.totalPages(3)).thenReturn(1);
-            when(animeListService.buildWatchingPageText(entries, 0)).thenReturn("страница 1");
-            when(animeListService.buildWatchingPageKeyboard(100L, 0, 1))
+            when(animeListService.buildStatusPageText(entries, 0, WatchStatus.WATCHING)).thenReturn("страница 1");
+            when(animeListService.buildStatusPageKeyboard(100L, 0, 1, AnimemizerBotCallback.WATCHING_PAGE))
                     .thenReturn(mock(InlineKeyboardMarkup.class));
 
             // When
@@ -154,7 +158,7 @@ class WatchingPageCallbackHandlerTest {
 
             // Then
             assertThat(result).isNull();
-            verify(animeListService).buildWatchingPageText(entries, 0);
+            verify(animeListService).buildStatusPageText(entries, 0, WatchStatus.WATCHING);
         }
 
         @Test

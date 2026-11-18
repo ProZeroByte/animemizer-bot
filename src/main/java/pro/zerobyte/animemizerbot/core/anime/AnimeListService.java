@@ -33,7 +33,7 @@ public class AnimeListService {
     private static final int PROGRESS_BAR_LENGTH = 10;
 
     /**
-     * An anime the user is currently watching, paired with the watched episode count.
+     * An anime from a user's status list, paired with the watched episode count.
      */
     public record WatchingEntry(Anime anime, int watchedEpisodes) {}
 
@@ -71,18 +71,18 @@ public class AnimeListService {
     }
 
     /**
-     * Fetches anime with status WATCHING only, paired with the watched episode count
+     * Fetches anime with the given status only, paired with the watched episode count
      * and sorted alphabetically by Russian name.
      */
-    public List<WatchingEntry> fetchWatchingEntries(long telegramUserId) {
-        List<Watchlist> watching = watchlistService.findByTelegramUserId(telegramUserId).stream()
-                .filter(entry -> entry.status() == WatchStatus.WATCHING)
+    public List<WatchingEntry> fetchEntries(long telegramUserId, WatchStatus status) {
+        List<Watchlist> matching = watchlistService.findByTelegramUserId(telegramUserId).stream()
+                .filter(entry -> entry.status() == status)
                 .toList();
-        if (watching.isEmpty()) {
+        if (matching.isEmpty()) {
             return List.of();
         }
 
-        Map<Long, Integer> watchedByAnimeId = watching.stream()
+        Map<Long, Integer> watchedByAnimeId = matching.stream()
                 .collect(Collectors.toMap(
                         Watchlist::animeId,
                         entry -> Objects.requireNonNullElse(entry.lastWatchedEpisode(), 0),
@@ -161,12 +161,12 @@ public class AnimeListService {
     }
 
     /**
-     * Builds the /watching page text as a two-line block per anime. Titles are bold
-     * and link to the anime card when a Shikimori id is available.
+     * Builds the page text for the given status as a two-line block per anime. Titles
+     * are bold and link to the anime card when a Shikimori id is available.
      */
-    public String buildWatchingPageText(List<WatchingEntry> entries, int pageIndex) {
+    public String buildStatusPageText(List<WatchingEntry> entries, int pageIndex, WatchStatus status) {
         if (entries.isEmpty()) {
-            return "Вы пока ничего не смотрите \uD83D\uDC40";
+            return emptyStatusText(status);
         }
 
         int fromIndex = pageIndex * PAGE_SIZE;
@@ -174,7 +174,8 @@ public class AnimeListService {
         List<WatchingEntry> pageItems = entries.subList(fromIndex, toIndex);
 
         StringBuilder sb = new StringBuilder();
-        sb.append("\uD83D\uDC40 <b>Смотрю (").append(entries.size()).append("):</b>");
+        sb.append(statusIcon(status)).append(" <b>").append(status.getRussianName())
+                .append(" (").append(entries.size()).append("):</b>");
         sb.append("\n\n");
 
         for (WatchingEntry entry : pageItems) {
@@ -197,10 +198,11 @@ public class AnimeListService {
     }
 
     /**
-     * Builds the /watching keyboard: pagination buttons only. Anime links live in the
-     * message text itself (see {@link #buildWatchingPageText}).
+     * Builds the status list keyboard: pagination buttons only. Anime links live in the
+     * message text itself (see {@link #buildStatusPageText}).
      */
-    public InlineKeyboardMarkup buildWatchingPageKeyboard(long telegramUserId, int pageIndex, int totalPages) {
+    public InlineKeyboardMarkup buildStatusPageKeyboard(long telegramUserId, int pageIndex, int totalPages,
+                                                        AnimemizerBotCallback pageCallback) {
         if (totalPages <= 1) {
             return null;
         }
@@ -210,13 +212,13 @@ public class AnimeListService {
         if (pageIndex > 0) {
             navButtons.add(InlineKeyboardButton.builder()
                     .text("\u25C0\uFE0F Назад")
-                    .callbackData(AnimemizerBotCallback.WATCHING_PAGE.getPrefix() + telegramUserId + ":" + (pageIndex - 1))
+                    .callbackData(pageCallback.getPrefix() + telegramUserId + ":" + (pageIndex - 1))
                     .build());
         }
         if (pageIndex < totalPages - 1) {
             navButtons.add(InlineKeyboardButton.builder()
                     .text("Вперёд \u25B6\uFE0F")
-                    .callbackData(AnimemizerBotCallback.WATCHING_PAGE.getPrefix() + telegramUserId + ":" + (pageIndex + 1))
+                    .callbackData(pageCallback.getPrefix() + telegramUserId + ":" + (pageIndex + 1))
                     .build());
         }
         if (!navButtons.isEmpty()) {
@@ -224,6 +226,22 @@ public class AnimeListService {
         }
 
         return new InlineKeyboardMarkup(rows);
+    }
+
+    private String statusIcon(WatchStatus status) {
+        return switch (status) {
+            case WATCHING -> "\uD83D\uDC40";
+            case ON_HOLD -> "\u23F8\uFE0F";
+            default -> "\uD83D\uDCCB";
+        };
+    }
+
+    private String emptyStatusText(WatchStatus status) {
+        return switch (status) {
+            case WATCHING -> "Вы пока ничего не смотрите \uD83D\uDC40";
+            case ON_HOLD -> "Вы пока ничего не отложили \u23F8\uFE0F";
+            default -> "В этом списке пока ничего нет.";
+        };
     }
 
     /**

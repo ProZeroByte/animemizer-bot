@@ -9,6 +9,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
+import pro.zerobyte.animemizerbot.bot.handler.AnimemizerBotCallback;
 import pro.zerobyte.animemizerbot.config.props.TelegramBotProperties;
 import pro.zerobyte.animemizerbot.core.anime.Anime;
 import pro.zerobyte.animemizerbot.core.anime.AnimeListService;
@@ -65,7 +66,7 @@ class AnimeListServiceTest {
     }
 
     @Nested
-    @DisplayName("fetchWatchingEntries")
+    @DisplayName("fetchEntries - WATCHING")
     class FetchWatchingEntries {
 
         @Test
@@ -80,7 +81,7 @@ class AnimeListServiceTest {
             when(animeService.findAllById(anyList())).thenReturn(List.of(anime10, anime12));
 
             // When
-            List<AnimeListService.WatchingEntry> result = listService.fetchWatchingEntries(USER_ID);
+            List<AnimeListService.WatchingEntry> result = listService.fetchEntries(USER_ID, WatchStatus.WATCHING);
 
             // Then
             assertThat(result).hasSize(2);
@@ -98,7 +99,7 @@ class AnimeListServiceTest {
                     newWatchlist(13L, WatchStatus.PLANNED, 0)));
 
             // When
-            List<AnimeListService.WatchingEntry> result = listService.fetchWatchingEntries(USER_ID);
+            List<AnimeListService.WatchingEntry> result = listService.fetchEntries(USER_ID, WatchStatus.WATCHING);
 
             // Then
             assertThat(result).isEmpty();
@@ -111,7 +112,7 @@ class AnimeListServiceTest {
             when(watchlistService.findByTelegramUserId(USER_ID)).thenReturn(List.of());
 
             // When
-            List<AnimeListService.WatchingEntry> result = listService.fetchWatchingEntries(USER_ID);
+            List<AnimeListService.WatchingEntry> result = listService.fetchEntries(USER_ID, WatchStatus.WATCHING);
 
             // Then
             assertThat(result).isEmpty();
@@ -129,7 +130,7 @@ class AnimeListServiceTest {
             when(animeService.findAllById(anyList())).thenReturn(List.of(beta, alpha));
 
             // When
-            List<AnimeListService.WatchingEntry> result = listService.fetchWatchingEntries(USER_ID);
+            List<AnimeListService.WatchingEntry> result = listService.fetchEntries(USER_ID, WatchStatus.WATCHING);
 
             // Then
             assertThat(result).extracting(entry -> entry.anime().russianName())
@@ -147,11 +148,49 @@ class AnimeListServiceTest {
             when(animeService.findAllById(anyList())).thenReturn(List.of(beta, alpha));
 
             // When
-            List<AnimeListService.WatchingEntry> result = listService.fetchWatchingEntries(USER_ID);
+            List<AnimeListService.WatchingEntry> result = listService.fetchEntries(USER_ID, WatchStatus.WATCHING);
 
             // Then
             assertThat(result).extracting(entry -> entry.anime().name())
                     .containsExactly("Alpha", "Beta");
+        }
+    }
+
+    @Nested
+    @DisplayName("fetchEntries")
+    class FetchEntries {
+
+        @Test
+        void should_filterByRequestedStatus_andPairWatchedEpisodes() {
+            // Given
+            Anime anime13 = newAnime(13L, "Отложенное", "On hold", 12);
+            when(watchlistService.findByTelegramUserId(USER_ID)).thenReturn(List.of(
+                    newWatchlist(10L, WatchStatus.WATCHING, 5),
+                    newWatchlist(13L, WatchStatus.ON_HOLD, 3),
+                    newWatchlist(14L, WatchStatus.DROPPED, 1)));
+            when(animeService.findAllById(anyList())).thenReturn(List.of(anime13));
+
+            // When
+            List<AnimeListService.WatchingEntry> result = listService.fetchEntries(USER_ID, WatchStatus.ON_HOLD);
+
+            // Then
+            assertThat(result).hasSize(1);
+            assertThat(result.getFirst().anime().id()).isEqualTo(13L);
+            assertThat(result.getFirst().watchedEpisodes()).isEqualTo(3);
+        }
+
+        @Test
+        void should_returnEmpty_when_noEntriesWithRequestedStatus() {
+            // Given
+            when(watchlistService.findByTelegramUserId(USER_ID)).thenReturn(List.of(
+                    newWatchlist(10L, WatchStatus.WATCHING, 5)));
+
+            // When
+            List<AnimeListService.WatchingEntry> result = listService.fetchEntries(USER_ID, WatchStatus.ON_HOLD);
+
+            // Then
+            assertThat(result).isEmpty();
+            verify(animeService, never()).findAllById(anyList());
         }
     }
 
@@ -182,7 +221,7 @@ class AnimeListServiceTest {
     }
 
     @Nested
-    @DisplayName("buildWatchingPageText")
+    @DisplayName("buildStatusPageText - WATCHING")
     class BuildWatchingPageText {
 
         @Test
@@ -192,7 +231,7 @@ class AnimeListServiceTest {
                     new AnimeListService.WatchingEntry(newAnime(10L, "Первое", "First", 24), 5));
 
             // When
-            String text = listService.buildWatchingPageText(entries, 0);
+            String text = listService.buildStatusPageText(entries, 0, WatchStatus.WATCHING);
 
             // Then
             assertThat(text).isEqualTo(
@@ -209,7 +248,7 @@ class AnimeListServiceTest {
                     new AnimeListService.WatchingEntry(newAnime(11L, "Второе", "Second", 0), 3));
 
             // When
-            String text = listService.buildWatchingPageText(entries, 0);
+            String text = listService.buildStatusPageText(entries, 0, WatchStatus.WATCHING);
 
             // Then
             assertThat(text).contains("  <code>\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB 5/?</code>");
@@ -227,7 +266,7 @@ class AnimeListServiceTest {
             String expectedTitle = "Первое " + ltEntity + "ТВ" + gtEntity + " " + ampEntity + " др";
 
             // When
-            String text = listService.buildWatchingPageText(entries, 0);
+            String text = listService.buildStatusPageText(entries, 0, WatchStatus.WATCHING);
 
             // Then
             assertThat(text).contains("<a href=\"https://t.me/" + BOT_USERNAME + "?start=show_10\">"
@@ -242,7 +281,7 @@ class AnimeListServiceTest {
                             newAnimeWithPublicId(10L, "kino_123", "Первое", "First", 12), 5));
 
             // When
-            String text = listService.buildWatchingPageText(entries, 0);
+            String text = listService.buildStatusPageText(entries, 0, WatchStatus.WATCHING);
 
             // Then
             assertThat(text).contains("\u25AA <b>Первое</b>");
@@ -258,7 +297,7 @@ class AnimeListServiceTest {
                     new AnimeListService.WatchingEntry(newAnime(10L, title, "Title", 12), 3));
 
             // When
-            String text = listService.buildWatchingPageText(entries, 0);
+            String text = listService.buildStatusPageText(entries, 0, WatchStatus.WATCHING);
 
             // Then
             assertThat(text).contains("<b>Очень длинное название аниме,...</b>");
@@ -271,7 +310,7 @@ class AnimeListServiceTest {
             List<AnimeListService.WatchingEntry> entries = List.of();
 
             // When
-            String text = listService.buildWatchingPageText(entries, 0);
+            String text = listService.buildStatusPageText(entries, 0, WatchStatus.WATCHING);
 
             // Then
             assertThat(text).contains("Вы пока ничего не смотрите");
@@ -287,8 +326,8 @@ class AnimeListServiceTest {
             }
 
             // When
-            String firstPage = listService.buildWatchingPageText(entries, 0);
-            String secondPage = listService.buildWatchingPageText(entries, 1);
+            String firstPage = listService.buildStatusPageText(entries, 0, WatchStatus.WATCHING);
+            String secondPage = listService.buildStatusPageText(entries, 1, WatchStatus.WATCHING);
 
             // Then
             assertThat(firstPage).startsWith("\uD83D\uDC40 <b>Смотрю (21):</b>\n\n");
@@ -303,7 +342,40 @@ class AnimeListServiceTest {
     }
 
     @Nested
-    @DisplayName("buildWatchingPageKeyboard")
+    @DisplayName("buildStatusPageText")
+    class BuildStatusPageText {
+
+        @Test
+        void should_buildOnHoldHeader_when_statusIsOnHold() {
+            // Given
+            List<AnimeListService.WatchingEntry> entries = List.of(
+                    new AnimeListService.WatchingEntry(newAnime(13L, "Отложенное", "On hold", 12), 3));
+
+            // When
+            String text = listService.buildStatusPageText(entries, 0, WatchStatus.ON_HOLD);
+
+            // Then
+            assertThat(text).startsWith("\u23F8\uFE0F <b>Отложено (1):</b>\n\n");
+            assertThat(text).contains("\u25AA <a href=\"https://t.me/" + BOT_USERNAME
+                    + "?start=show_13\"><b>Отложенное</b></a>");
+            assertThat(text).contains("  <code>\u25CF\u25CF\u25CF\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB\u25CB 3/12</code>");
+        }
+
+        @Test
+        void should_showOnHoldEmptyMessage_when_noEntries() {
+            // Given
+            List<AnimeListService.WatchingEntry> entries = List.of();
+
+            // When
+            String text = listService.buildStatusPageText(entries, 0, WatchStatus.ON_HOLD);
+
+            // Then
+            assertThat(text).contains("Вы пока ничего не отложили");
+        }
+    }
+
+    @Nested
+    @DisplayName("buildStatusPageKeyboard - WATCHING")
     class BuildWatchingPageKeyboard {
 
         @Test
@@ -314,7 +386,7 @@ class AnimeListServiceTest {
                     new AnimeListService.WatchingEntry(newAnime(11L, "Второе", "Second", 12), 3));
 
             // When
-            InlineKeyboardMarkup keyboard = listService.buildWatchingPageKeyboard(USER_ID, 0, 1);
+            InlineKeyboardMarkup keyboard = listService.buildStatusPageKeyboard(USER_ID, 0, 1, AnimemizerBotCallback.WATCHING_PAGE);
 
             // Then
             assertThat(keyboard).isNull();
@@ -330,8 +402,8 @@ class AnimeListServiceTest {
             }
 
             // When
-            InlineKeyboardMarkup firstPageKeyboard = listService.buildWatchingPageKeyboard(USER_ID, 0, 2);
-            InlineKeyboardMarkup secondPageKeyboard = listService.buildWatchingPageKeyboard(USER_ID, 1, 2);
+            InlineKeyboardMarkup firstPageKeyboard = listService.buildStatusPageKeyboard(USER_ID, 0, 2, AnimemizerBotCallback.WATCHING_PAGE);
+            InlineKeyboardMarkup secondPageKeyboard = listService.buildStatusPageKeyboard(USER_ID, 1, 2, AnimemizerBotCallback.WATCHING_PAGE);
 
             // Then — one nav row per page, no per-anime buttons
             List<InlineKeyboardRow> firstPageRows = firstPageKeyboard.getKeyboard();
@@ -353,10 +425,35 @@ class AnimeListServiceTest {
             List<AnimeListService.WatchingEntry> entries = List.of();
 
             // When
-            InlineKeyboardMarkup keyboard = listService.buildWatchingPageKeyboard(USER_ID, 0, 0);
+            InlineKeyboardMarkup keyboard = listService.buildStatusPageKeyboard(USER_ID, 0, 0, AnimemizerBotCallback.WATCHING_PAGE);
 
             // Then
             assertThat(keyboard).isNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("buildStatusPageKeyboard")
+    class BuildStatusPageKeyboard {
+
+        @Test
+        void should_useOnHoldPageCallbackData_when_statusIsOnHold() {
+            // Given / When
+            InlineKeyboardMarkup firstPageKeyboard = listService.buildStatusPageKeyboard(
+                    USER_ID, 0, 2, AnimemizerBotCallback.ON_HOLD_PAGE);
+            InlineKeyboardMarkup secondPageKeyboard = listService.buildStatusPageKeyboard(
+                    USER_ID, 1, 2, AnimemizerBotCallback.ON_HOLD_PAGE);
+
+            // Then
+            List<InlineKeyboardRow> firstPageRows = firstPageKeyboard.getKeyboard();
+            assertThat(firstPageRows).hasSize(1);
+            assertThat(firstPageRows.get(0).get(0).getText()).contains("Вперёд");
+            assertThat(firstPageRows.get(0).get(0).getCallbackData()).isEqualTo("ON_HOLD_PAGE:100:1");
+
+            List<InlineKeyboardRow> secondPageRows = secondPageKeyboard.getKeyboard();
+            assertThat(secondPageRows).hasSize(1);
+            assertThat(secondPageRows.get(0).get(0).getText()).contains("Назад");
+            assertThat(secondPageRows.get(0).get(0).getCallbackData()).isEqualTo("ON_HOLD_PAGE:100:0");
         }
     }
 }

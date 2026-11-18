@@ -16,10 +16,12 @@ import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
+import pro.zerobyte.animemizerbot.bot.handler.AnimemizerBotCallback;
 import pro.zerobyte.animemizerbot.bot.handler.AnimemizerBotCommand;
 import pro.zerobyte.animemizerbot.core.anime.Anime;
 import pro.zerobyte.animemizerbot.core.anime.AnimeListService;
 import pro.zerobyte.animemizerbot.core.anime.AnimeService;
+import pro.zerobyte.animemizerbot.core.watchlist.WatchStatus;
 
 import java.util.List;
 
@@ -89,10 +91,10 @@ class WatchingCommandHandlerTest {
             Message placeholder = mock(Message.class);
             when(placeholder.getMessageId()).thenReturn(123);
             when(telegramClient.execute(any(SendMessage.class))).thenReturn(placeholder);
-            when(animeListService.fetchWatchingEntries(USER_ID)).thenReturn(entries);
-            when(animeListService.buildWatchingPageText(entries, 0)).thenReturn("список смотрю");
+            when(animeListService.fetchEntries(USER_ID, WatchStatus.WATCHING)).thenReturn(entries);
+            when(animeListService.buildStatusPageText(entries, 0, WatchStatus.WATCHING)).thenReturn("список смотрю");
             when(animeListService.totalPages(1)).thenReturn(1);
-            when(animeListService.buildWatchingPageKeyboard(USER_ID, 0, 1))
+            when(animeListService.buildStatusPageKeyboard(USER_ID, 0, 1, AnimemizerBotCallback.WATCHING_PAGE))
                     .thenReturn(mock(InlineKeyboardMarkup.class));
 
             // When
@@ -114,10 +116,12 @@ class WatchingCommandHandlerTest {
             Message placeholder = mock(Message.class);
             when(placeholder.getMessageId()).thenReturn(123);
             when(telegramClient.execute(any(SendMessage.class))).thenReturn(placeholder);
-            when(animeListService.fetchWatchingEntries(USER_ID)).thenReturn(entries);
-            when(animeListService.buildWatchingPageText(entries, 0)).thenReturn("Вы пока ничего не смотрите");
+            when(animeListService.fetchEntries(USER_ID, WatchStatus.WATCHING)).thenReturn(entries);
+            when(animeListService.buildStatusPageText(entries, 0, WatchStatus.WATCHING))
+                    .thenReturn("Вы пока ничего не смотрите");
             when(animeListService.totalPages(0)).thenReturn(0);
-            when(animeListService.buildWatchingPageKeyboard(USER_ID, 0, 0)).thenReturn(null);
+            when(animeListService.buildStatusPageKeyboard(USER_ID, 0, 0, AnimemizerBotCallback.WATCHING_PAGE))
+                    .thenReturn(null);
 
             // When
             PartialBotApiMethod<?> result = handler.handle(update);
@@ -136,10 +140,10 @@ class WatchingCommandHandlerTest {
 
             when(telegramClient.execute(any(SendMessage.class)))
                     .thenThrow(new TelegramApiException("network error"));
-            when(animeListService.fetchWatchingEntries(USER_ID)).thenReturn(entries);
-            when(animeListService.buildWatchingPageText(entries, 0)).thenReturn("список смотрю");
+            when(animeListService.fetchEntries(USER_ID, WatchStatus.WATCHING)).thenReturn(entries);
+            when(animeListService.buildStatusPageText(entries, 0, WatchStatus.WATCHING)).thenReturn("список смотрю");
             when(animeListService.totalPages(1)).thenReturn(1);
-            when(animeListService.buildWatchingPageKeyboard(USER_ID, 0, 1))
+            when(animeListService.buildStatusPageKeyboard(USER_ID, 0, 1, AnimemizerBotCallback.WATCHING_PAGE))
                     .thenReturn(mock(InlineKeyboardMarkup.class));
 
             // When

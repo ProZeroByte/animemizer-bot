@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.PartialBotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
+import org.telegram.telegrambots.meta.api.objects.LinkPreviewOptions;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -13,6 +14,7 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 import pro.zerobyte.animemizerbot.bot.handler.AnimemizerBotCallback;
 import pro.zerobyte.animemizerbot.bot.handler.CallbackHandler;
 import pro.zerobyte.animemizerbot.core.anime.AnimeListService;
+import pro.zerobyte.animemizerbot.core.watchlist.WatchStatus;
 
 import java.util.List;
 
@@ -25,9 +27,7 @@ public class WatchingPageCallbackHandler implements CallbackHandler {
 
     private static final Logger log = LoggerFactory.getLogger(WatchingPageCallbackHandler.class);
     private static final String SEARCH_PLACEHOLDER_FORMAT = "\uD83D\uDD0D Поиск страница %d...";
-    private static final String EMPTY_LIST_TEXT = "Вы пока ничего не смотрите \uD83D\uDC40";
-    private static final org.telegram.telegrambots.meta.api.objects.LinkPreviewOptions DISABLED_LINK_PREVIEW =
-            org.telegram.telegrambots.meta.api.objects.LinkPreviewOptions.builder().isDisabled(true).build();
+    private static final LinkPreviewOptions DISABLED_LINK_PREVIEW = LinkPreviewOptions.builder().isDisabled(true).build();
 
     private final AnimeListService animeListService;
     private final TelegramClient telegramClient;
@@ -83,17 +83,19 @@ public class WatchingPageCallbackHandler implements CallbackHandler {
         showPlaceholder(chatId, messageId, pageIndex + 1);
 
         // Fetch watching list and replace placeholder with result
-        List<AnimeListService.WatchingEntry> entries = animeListService.fetchWatchingEntries(ownerId);
+        List<AnimeListService.WatchingEntry> entries = animeListService.fetchEntries(ownerId, WatchStatus.WATCHING);
         int totalPages = animeListService.totalPages(entries.size());
         if (totalPages == 0) {
-            replaceWithPage(chatId, messageId, EMPTY_LIST_TEXT, null);
+            replaceWithPage(chatId, messageId,
+                    animeListService.buildStatusPageText(entries, 0, WatchStatus.WATCHING), null);
             return null;
         }
 
-        pageIndex = Math.max(0, Math.min(pageIndex, totalPages - 1));
+        pageIndex = Math.clamp(pageIndex, 0, totalPages - 1);
 
-        String pageText = animeListService.buildWatchingPageText(entries, pageIndex);
-        InlineKeyboardMarkup keyboard = animeListService.buildWatchingPageKeyboard(ownerId, pageIndex, totalPages);
+        String pageText = animeListService.buildStatusPageText(entries, pageIndex, WatchStatus.WATCHING);
+        InlineKeyboardMarkup keyboard = animeListService.buildStatusPageKeyboard(
+                ownerId, pageIndex, totalPages, AnimemizerBotCallback.WATCHING_PAGE);
         replaceWithPage(chatId, messageId, pageText, keyboard);
 
         return null;

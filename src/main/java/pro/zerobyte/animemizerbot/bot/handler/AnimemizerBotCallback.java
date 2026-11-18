@@ -14,6 +14,7 @@ public enum AnimemizerBotCallback {
     LIST_PAGE("LIST_PAGE"),
     REFRESH("REFRESH"),
     WATCHING_PAGE("WATCHING_PAGE"),
+    ON_HOLD_PAGE("ON_HOLD_PAGE"),
     SHOW_ANIME("SHOW_ANIME");
 
     private static final Logger log = LoggerFactory.getLogger(AnimemizerBotCallback.class);

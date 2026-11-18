@@ -147,6 +147,21 @@ class WatchlistServiceTest {
         }
 
         @Test
+        void should_keepNullStatus_when_untrackedAnimeReachesLastEpisode() {
+            // Given
+            Watchlist wl = newWatchlist(USER_ID, ANIME_ID, null, 11);
+            when(repository.findByTelegramUserIdAndAnimeId(USER_ID, ANIME_ID)).thenReturn(Optional.of(wl));
+            stubSaveToReturnSame();
+
+            // When
+            Watchlist result = service.incrementEpisode(USER_ID, ANIME_ID, 12);
+
+            // Then
+            assertThat(result.lastWatchedEpisode()).isEqualTo(12);
+            assertThat(result.status()).isNull();
+        }
+
+        @Test
         void should_setStatusToOngoing_when_notAllEpisodesWatched() {
             // Given
             Watchlist wl = newWatchlist(USER_ID, ANIME_ID, WatchStatus.PLANNED, 4);
@@ -342,6 +357,56 @@ class WatchlistServiceTest {
             // Then
             assertThat(result.lastWatchedEpisode()).isEqualTo(5);
             verify(animeService, never()).findById(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("toggleStatus")
+    class ToggleStatus {
+
+        @Test
+        void should_clearStatusAndKeepProgress_when_sameStatusSelected() {
+            // Given
+            Watchlist wl = newWatchlist(USER_ID, ANIME_ID, WatchStatus.WATCHING, 5);
+            when(repository.findByTelegramUserIdAndAnimeId(USER_ID, ANIME_ID)).thenReturn(Optional.of(wl));
+            stubSaveToReturnSame();
+
+            // When
+            Watchlist result = service.toggleStatus(USER_ID, ANIME_ID, WatchStatus.WATCHING);
+
+            // Then
+            assertThat(result.status()).isNull();
+            assertThat(result.lastWatchedEpisode()).isEqualTo(5);
+            verify(repository).save(any(Watchlist.class));
+        }
+
+        @Test
+        void should_setNewStatus_when_differentStatusSelected() {
+            // Given
+            Watchlist wl = newWatchlist(USER_ID, ANIME_ID, WatchStatus.WATCHING, 5);
+            when(repository.findByTelegramUserIdAndAnimeId(USER_ID, ANIME_ID)).thenReturn(Optional.of(wl));
+            stubSaveToReturnSame();
+
+            // When
+            Watchlist result = service.toggleStatus(USER_ID, ANIME_ID, WatchStatus.PLANNED);
+
+            // Then
+            assertThat(result.status()).isEqualTo(WatchStatus.PLANNED);
+            assertThat(result.lastWatchedEpisode()).isEqualTo(5);
+        }
+
+        @Test
+        void should_createWatchlist_when_noneExists() {
+            // Given
+            when(repository.findByTelegramUserIdAndAnimeId(USER_ID, ANIME_ID)).thenReturn(Optional.empty());
+            stubSaveToReturnSame();
+
+            // When
+            Watchlist result = service.toggleStatus(USER_ID, ANIME_ID, WatchStatus.WATCHING);
+
+            // Then
+            assertThat(result.status()).isEqualTo(WatchStatus.WATCHING);
+            assertThat(result.lastWatchedEpisode()).isZero();
         }
     }
 }

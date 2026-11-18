@@ -31,9 +31,11 @@ public class WatchlistService {
 
         if (currentEpisode < max) {
             int newEpisode = currentEpisode + 1;
-            WatchStatus newStatus = (newEpisode >= max && max != Integer.MAX_VALUE)
-                    ? watchlist.status().onAllEpisodesWatched()
-                    : watchlist.status();
+            WatchStatus currentStatus = watchlist.status();
+            WatchStatus newStatus = currentStatus;
+            if (currentStatus != null && newEpisode >= max && max != Integer.MAX_VALUE) {
+                newStatus = currentStatus.onAllEpisodesWatched();
+            }
 
             Watchlist updated = new Watchlist(
                     watchlist.id(),
@@ -115,6 +117,31 @@ public class WatchlistService {
                 LocalDateTime.now()
         );
         return repository.save(updated);
+    }
+
+    /**
+     * Applies the requested status, or clears it when the same status is selected again.
+     * Clearing keeps the watched-episode progress and leaves the anime without a status.
+     */
+    public Watchlist toggleStatus(Long telegramUserId, Long animeId, WatchStatus status) {
+        Optional<Watchlist> existing = repository.findByTelegramUserIdAndAnimeId(telegramUserId, animeId);
+        if (existing.isPresent() && existing.get().status() == status) {
+            return clearStatus(existing.get());
+        }
+        return setStatus(telegramUserId, animeId, status);
+    }
+
+    private Watchlist clearStatus(Watchlist watchlist) {
+        Watchlist cleared = new Watchlist(
+                watchlist.id(),
+                watchlist.telegramUserId(),
+                watchlist.animeId(),
+                null,
+                watchlist.lastWatchedEpisode(),
+                watchlist.addedAt(),
+                LocalDateTime.now()
+        );
+        return repository.save(cleared);
     }
 
     private Watchlist createNewWatchlist(Long telegramUserId, Long animeId) {

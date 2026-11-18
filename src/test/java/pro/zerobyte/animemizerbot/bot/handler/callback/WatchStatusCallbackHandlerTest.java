@@ -115,7 +115,7 @@ class WatchStatusCallbackHandlerTest {
             Watchlist watchlist = buildWatchlist(42L, WatchStatus.WATCHING, 0);
 
             when(animeService.findById(42L)).thenReturn(Optional.of(anime));
-            when(watchlistService.setStatus(USER_ID, 42L, WatchStatus.WATCHING)).thenReturn(watchlist);
+            when(watchlistService.toggleStatus(USER_ID, 42L, WatchStatus.WATCHING)).thenReturn(watchlist);
             when(messageBuilder.buildCaption(anime, 0, WatchStatus.WATCHING)).thenReturn("caption");
             when(messageBuilder.createInlineKeyboard(anime, 0)).thenReturn(mock(InlineKeyboardMarkup.class));
 
@@ -124,6 +124,28 @@ class WatchStatusCallbackHandlerTest {
 
             // Then
             assertThat(result).isInstanceOf(EditMessageText.class);
+        }
+
+        @Test
+        void should_clearStatusAndKeepProgress_when_sameStatusClickedAgain() {
+            // Given
+            WatchStatusCallbackHandler handler = new WatchStatusCallbackHandler(
+                    animeService, watchlistService, messageBuilder);
+            Update update = buildCallbackUpdate("SET_WATCH_STATUS:42:WATCHING", USER_ID, false);
+            Anime anime = buildAnime(42L, "shikimori_42");
+            Watchlist watchlist = buildWatchlist(42L, null, 5);
+
+            when(animeService.findById(42L)).thenReturn(Optional.of(anime));
+            when(watchlistService.toggleStatus(USER_ID, 42L, WatchStatus.WATCHING)).thenReturn(watchlist);
+            when(messageBuilder.buildCaption(anime, 5, null)).thenReturn("caption");
+            when(messageBuilder.createInlineKeyboard(anime, 5)).thenReturn(mock(InlineKeyboardMarkup.class));
+
+            // When
+            PartialBotApiMethod<?> result = handler.handle(update);
+
+            // Then
+            assertThat(result).isInstanceOf(EditMessageText.class);
+            Mockito.verify(messageBuilder).buildCaption(anime, 5, null);
         }
 
         @Test

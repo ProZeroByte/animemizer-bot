@@ -70,7 +70,7 @@ public class WatchStatusCallbackHandler implements CallbackHandler {
 
         return animeService.findById(animeId)
                 .map(anime -> {
-                    Watchlist watchlist = watchlistService.setStatus(telegramUserId, animeId, watchStatus);
+                    Watchlist watchlist = watchlistService.toggleStatus(telegramUserId, animeId, watchStatus);
 
                     String caption = messageBuilder.buildCaption(anime, watchlist.lastWatchedEpisode(), watchlist.status());
                     InlineKeyboardMarkup markup = messageBuilder.createInlineKeyboard(anime, watchlist.lastWatchedEpisode());

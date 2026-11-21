@@ -456,6 +456,12 @@ The `REWATCHING` watch status was removed from the application. Before deploying
 UPDATE watchlist SET status = 'WATCHING' WHERE status = 'REWATCHING';
 ```
 
+Selecting the active watch status again toggles it off, storing `NULL` in `watchlist.status` while keeping episode progress. Production databases where this column has a `NOT NULL` constraint must drop it before deploying, otherwise the status button fails with a `DataIntegrityViolationException`:
+
+```sql
+ALTER TABLE watchlist ALTER COLUMN status DROP NOT NULL;
+```
+
 ### Test Coverage Areas
 
 The test suite covers:
